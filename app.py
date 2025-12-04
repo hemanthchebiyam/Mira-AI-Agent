@@ -111,15 +111,22 @@ def download_actions(content, prefix="report"):
             )
             
             # Text
-            # Strip markdown for text
-            text_content = re.sub(r'[#*_`]', '', content)
-            st.download_button(
-                label="Plain Text (.txt)",
-                data=text_content,
-                file_name=f"{prefix}_{datetime.now().strftime('%Y%m%d')}.txt",
-                mime="text/plain",
-                use_container_width=True
-            )
+            if st.button("Plain Text (.txt)", use_container_width=True):
+                 with st.spinner("Converting to TXT..."):
+                    try:
+                        txt_path = output_gen.save_txt(content, prefix)
+                        with open(txt_path, "r", encoding='utf-8') as f:
+                            txt_data = f.read()
+                        st.download_button(
+                            label="Click to Download TXT",
+                            data=txt_data,
+                            file_name=os.path.basename(txt_path),
+                            mime="text/plain",
+                            use_container_width=True,
+                            key=f"txt_dl_{prefix}_{int(time.time())}"
+                        )
+                    except Exception as e:
+                        st.error(f"TXT Error: {str(e)}")
             
             # PDF
             if st.button("PDF Document (.pdf)", use_container_width=True):
@@ -160,8 +167,8 @@ def download_actions(content, prefix="report"):
     with col2:
         with st.popover("📧 Email"):
             st.markdown("### Email Settings")
-            sender_email = st.text_input("Sender Email", value=os.getenv("EMAIL_SENDER", ""), placeholder="you@gmail.com")
-            sender_password = st.text_input("App Password", value=os.getenv("EMAIL_PASSWORD", ""), type="password", help="Use App Password for Gmail")
+            sender_email = st.text_input("Sender Email", placeholder="you@gmail.com")
+            sender_password = st.text_input("App Password", type="password", help="Use App Password for Gmail")
             recipient = st.text_input("Recipient", placeholder="manager@company.com")
             
             if st.button("Send Email", use_container_width=True):
@@ -243,7 +250,7 @@ with report_tab:
         with col_input:
             board_input = st.text_input(
                 "Board ID or URL", 
-                placeholder="e.g. Dcsflgzg or https://trello.com/b/..."
+                placeholder="e.g. Qwertyui or https://trello.com/b/..."
             )
         
         with col_btn:
