@@ -43,16 +43,15 @@ with st.sidebar:
     # LLM Selection
     st.subheader("AI Model")
     
-    model_options = {
-    "gpt-4o-mini": "Cheapest & Fast",
-    "gpt-3.5-turbo": "Standard Legacy",
-    "gpt-4o": "High Intelligence"
-    }
+    model_options = [
+    "gpt-4o-mini",
+    "gpt-3.5-turbo",
+    "gpt-4o"
+    ]
 
     selected_model_key = st.selectbox(
         "Select OpenAI Model", 
-        options=list(model_options.keys()),
-        format_func=lambda x: f"{x} - {model_options[x]}"
+        options=model_options
     )
 
     if selected_model_key == "gpt-4o-mini":
