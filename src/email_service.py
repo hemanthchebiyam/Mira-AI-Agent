@@ -22,15 +22,15 @@ class EmailService:
             msg['Subject'] = subject
             
             # Clean markdown for email body
-            # Sometimes LLMs output ```markdown at the start, remove it
             cleaned_markdown = re.sub(r'^```markdown\s*', '', body_markdown)
             cleaned_markdown = re.sub(r'^```\s*', '', cleaned_markdown)
             cleaned_markdown = re.sub(r'```$', '', cleaned_markdown)
             
-            # Convert Markdown to HTML
-            html_content = markdown.markdown(cleaned_markdown)
+            # Convert Markdown to HTML with TABLES extension explicitly enabled
+            # This is critical for the Project Plan timeline to render correctly
+            html_content = markdown.markdown(cleaned_markdown, extensions=['tables', 'fenced_code'])
             
-            # Add professional styling
+            # Add professional styling including specific TABLE styles
             styled_html = f"""
             <html>
                 <head>
@@ -42,6 +42,28 @@ class EmailService:
                         ul {{ padding-left: 20px; }}
                         li {{ margin-bottom: 5px; }}
                         strong {{ color: #2980b9; }}
+                        
+                        /* TABLE STYLES FOR EMAIL CLIENTS */
+                        table {{
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin: 15px 0;
+                            font-size: 14px;
+                        }}
+                        th, td {{
+                            padding: 12px;
+                            border: 1px solid #ddd;
+                            text-align: left;
+                        }}
+                        th {{
+                            background-color: #f4f4f4;
+                            font-weight: bold;
+                            color: #2c3e50;
+                        }}
+                        tr:nth-child(even) {{
+                            background-color: #f9f9f9;
+                        }}
+                        
                         .footer {{ margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; font-size: 12px; color: #7f8c8d; }}
                     </style>
                 </head>
@@ -54,7 +76,6 @@ class EmailService:
             </html>
             """
             
-            # Attach both plain text and HTML versions
             part1 = MIMEText(cleaned_markdown, 'plain')
             part2 = MIMEText(styled_html, 'html')
             

@@ -149,7 +149,17 @@ class OutputGenerator:
 
     def save_pdf(self, content, prefix="report"):
         path = self._get_paths(prefix, "pdf")
-        html_content = markdown.markdown(content, extensions=['tables', 'fenced_code'])
+        
+        # Clean emojis specifically for PDF generation to avoid black boxes
+        # This regex removes characters in the emoji range
+        # ranges: 1F600-1F64F (Emoticons), 1F300-1F5FF (Symbols & Pictographs), etc.
+        # A simple broad regex for high unicode characters often catches emojis
+        # Or we can just remove specific colored circles if we know them.
+        # Safer approach: Remove common emoji ranges to ensure clean PDF.
+        
+        pdf_safe_content = re.sub(r'[^\x00-\x7F]+', '', content) if prefix == "status_report" else content
+        
+        html_content = markdown.markdown(pdf_safe_content, extensions=['tables', 'fenced_code'])
         
         styled_html = f"""
         <html>
@@ -160,9 +170,12 @@ class OutputGenerator:
                 body {{ font-family: Helvetica, Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #333; }}
                 h1 {{ color: #2c3e50; font-size: 18pt; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
                 h2 {{ color: #2c3e50; font-size: 14pt; margin-top: 20px; border-bottom: 1px solid #eee; }}
+                
+                /* Tables */
                 table {{ width: 100%; border-collapse: collapse; margin-bottom: 15px; }}
                 th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
                 th {{ background-color: #f2f2f2; color: #333; }}
+                
                 code {{ background-color: #f8f9fa; padding: 2px 4px; font-family: Courier; }}
             </style>
         </head>
