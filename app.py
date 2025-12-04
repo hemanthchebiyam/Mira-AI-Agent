@@ -84,6 +84,7 @@ with st.sidebar:
 # Initialize Utils
 output_gen = OutputGenerator(output_dir='outputs')
 doc_processor = DocumentProcessor()
+# Initialize LLM Handler without crashing if key is missing
 llm = LLMHandler(api_key=api_key, model=selected_model_key)
 
 def clean_markdown_display(content):
