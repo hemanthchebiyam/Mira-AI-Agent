@@ -1,4 +1,5 @@
 import requests
+import re
 
 class TrelloClient:
     def __init__(self, api_key, token):
@@ -6,10 +7,20 @@ class TrelloClient:
         self.token = token
         self.base_url = "https://api.trello.com/1"
 
-    def fetch_board_data(self, board_id):
+    def fetch_board_data(self, board_input):
         """
         Fetch all lists and cards for a given board.
+        Accepts Board ID or full URL.
         """
+        board_id = board_input
+        
+        # Extract ID if URL is provided
+        # Trello URLs: https://trello.com/b/BOARD_ID/board-name
+        if "trello.com/b/" in board_input:
+            match = re.search(r'trello\.com/b/([a-zA-Z0-9]+)', board_input)
+            if match:
+                board_id = match.group(1)
+        
         # First ensure we resolve the board ID if it's a short ID
         try:
             board_url = f"{self.base_url}/boards/{board_id}"
@@ -53,4 +64,3 @@ class TrelloClient:
             
         except Exception as e:
             return {"error": str(e)}
-
