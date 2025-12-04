@@ -1,43 +1,62 @@
 # Mira AI Agent 🤖
 
-Mira is a Technical Program Management (TPM) assistant built with Streamlit. It helps streamline project planning and status reporting using AI.
+Mira is an intelligent Technical Program Management (TPM) assistant. It streamlines project planning and weekly status reporting using AI, allowing TPMs to focus on strategy rather than documentation.
 
-## Features
+**🔗 Live App:** [https://mira-ai-agent.streamlit.app/](https://mira-ai-agent.streamlit.app/)
 
-- **Project Planning**: Upload PRDs and Timeline documents (PDF, DOCX, TXT) to generate execution plans.
-- **Status Reporting**: Connects to Trello to generate weekly status reports, executive summaries, and risk assessments.
-- **Export & Share**: Save reports as Markdown/PDF or email them directly.
+---
 
-## Setup
+## Key Features
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd Mira-AI-Agent
-   ```
+### 1. 📅 Intelligent Project Planning
+Upload unstructured project documents (PRDs, Timelines, Meeting Notes) to generate a comprehensive, structured Project Plan.
+- **Supported Formats:** PDF, DOCX, TXT, Excel.
+- **Output:** Professional Execution Plan including Executive Summary, Timeline, Risks, and Resource Requirements.
+- **Downloads:** PDF, Word (DOCX), Markdown, Plain Text.
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 2. 📊 Automated Status Reporting
+Connect your Trello board to instantly generate weekly status reports.
+- **Integration:** Works with Trello Board IDs or direct URLs.
+- **Analysis:** Categorizes Completed vs. In-Progress tasks.
+- **Risk Detection:** Automatically identifies potential blockers and risks.
+- **Output:** Executive-ready status emails and documents.
 
-3. **Configure Environment Variables:**
-   - Copy `.env.example` to `.env`:
-     ```bash
-     cp .env.example .env
-     # On Windows: copy .env.example .env
-     ```
-   - Open `.env` and fill in your API keys:
-     - `OPENAI_API_KEY`: Your OpenAI API key.
-     - `TRELLO_API_KEY` & `TRELLO_TOKEN`: From [Trello Power-Ups](https://trello.com/power-ups/admin).
-     - `TRELLO_BOARD_ID`: (Optional) Default board ID to load.
-     - `EMAIL_SENDER` & `EMAIL_PASSWORD`: (Optional) For sending reports via email.
+### 3. 📤 One-Click Sharing
+- **Direct Email:** Send formatted reports directly to stakeholders from the app.
+- **Multi-Format Export:** Download reports in the format that fits your workflow (PDF for sharing, DOCX for editing, MD for documentation).
 
-## Run the App
+---
 
-```bash
-streamlit run app.py
-```
+## How to Use
 
-The app will open in your browser at `http://localhost:8501`.
+### Setup API Keys
+To use Mira, you simply need to enter your credentials in the sidebar configuration. No local setup required.
 
+1.  **OpenAI API Key:** Required for AI generation.
+2.  **Trello Credentials:** (For Status Reports)
+    *   Get your Key & Token from [Trello Power-Ups Admin](https://trello.com/power-ups/admin).
+3.  **Email App Password:** (For Sending Emails)
+    *   Go to your Google Account > Security > 2-Step Verification > App Passwords.
+    *   Generate a new password for "Mail" / "Mira Agent".
+    *   Use this 16-character code in the "App Password" field in the UI.
+
+### generating a Project Plan
+1.  Go to the **Project Planning** tab.
+2.  Upload your project files (e.g., `Project_Scope.pdf`).
+3.  Click **Generate Plan**.
+4.  Review the plan and download it as a PDF or Word Doc.
+
+### Generating a Status Report
+1.  Go to the **Status Reports** tab.
+2.  Enter your **Trello Board URL** (e.g., `https://trello.com/b/ID/name`).
+3.  Click **Generate Report**.
+4.  Edit or review the output, then click **Send Email** to forward it to your team.
+
+---
+
+## Tech Stack
+- **Frontend:** Streamlit
+- **AI Logic:** OpenAI GPT-4o / GPT-3.5
+- **Document Processing:** PyPDF2, python-docx, BeautifulSoup, Pandas
+- **Integrations:** Trello API, SMTP (Gmail)
+- **Deployment:** Streamlit Community Cloud
