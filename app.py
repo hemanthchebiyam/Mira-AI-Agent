@@ -94,85 +94,78 @@ def clean_markdown_display(content):
     cleaned = re.sub(r'```$', '', cleaned)
     return cleaned
 
-def download_actions(content, prefix="report"):
-    """Reusable download actions component"""
+def download_actions(file_paths, content, prefix="report", key_prefix=""):
+    """Reusable download actions component with Eager Generation paths"""
     col1, col2 = st.columns([3, 1])
     
     with col1:
         with st.popover("💾 Download Options"):
             st.write("Select format to download:")
             
-            # Markdown
+            # Markdown (read from file or memory)
+            # We use content directly for MD to avoid re-read
             st.download_button(
                 label="Markdown (.md)",
                 data=content,
-                file_name=f"{prefix}_{datetime.now().strftime('%Y%m%d')}.md",
+                file_name=os.path.basename(file_paths['md']),
                 mime="text/markdown",
-                use_container_width=True
+                use_container_width=True,
+                key=f"{key_prefix}_dl_md"
             )
             
-            # Text
-            if st.button("Plain Text (.txt)", use_container_width=True):
-                 with st.spinner("Converting to TXT..."):
-                    try:
-                        txt_path = output_gen.save_txt(content, prefix)
-                        with open(txt_path, "r", encoding='utf-8') as f:
-                            txt_data = f.read()
-                        st.download_button(
-                            label="Click to Download TXT",
-                            data=txt_data,
-                            file_name=os.path.basename(txt_path),
-                            mime="text/plain",
-                            use_container_width=True,
-                            key=f"txt_dl_{prefix}_{int(time.time())}"
-                        )
-                    except Exception as e:
-                        st.error(f"TXT Error: {str(e)}")
+            # Text - Read pre-generated file
+            try:
+                with open(file_paths['txt'], "r", encoding='utf-8') as f:
+                    txt_data = f.read()
+                st.download_button(
+                    label="Plain Text (.txt)",
+                    data=txt_data,
+                    file_name=os.path.basename(file_paths['txt']),
+                    mime="text/plain",
+                    use_container_width=True,
+                    key=f"{key_prefix}_dl_txt"
+                )
+            except Exception as e:
+                st.error(f"TXT Error: {str(e)}")
             
-            # PDF
-            if st.button("PDF Document (.pdf)", use_container_width=True):
-                with st.spinner("Converting to PDF..."):
-                    try:
-                        pdf_path = output_gen.save_pdf(content, prefix)
-                        with open(pdf_path, "rb") as f:
-                            pdf_data = f.read()
-                        st.download_button(
-                            label="Click to Download PDF",
-                            data=pdf_data,
-                            file_name=os.path.basename(pdf_path),
-                            mime="application/pdf",
-                            use_container_width=True,
-                            key=f"pdf_dl_{prefix}_{int(time.time())}"
-                        )
-                    except Exception as e:
-                        st.error(f"PDF Error: {str(e)}")
+            # PDF - Read pre-generated file
+            try:
+                with open(file_paths['pdf'], "rb") as f:
+                    pdf_data = f.read()
+                st.download_button(
+                    label="PDF Document (.pdf)",
+                    data=pdf_data,
+                    file_name=os.path.basename(file_paths['pdf']),
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key=f"{key_prefix}_dl_pdf"
+                )
+            except Exception as e:
+                st.error(f"PDF Error: {str(e)}")
                         
-            # DOCX
-            if st.button("Word Document (.docx)", use_container_width=True):
-                with st.spinner("Converting to Word..."):
-                    try:
-                        docx_path = output_gen.save_docx(content, prefix)
-                        with open(docx_path, "rb") as f:
-                            docx_data = f.read()
-                        st.download_button(
-                            label="Click to Download DOCX",
-                            data=docx_data,
-                            file_name=os.path.basename(docx_path),
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            use_container_width=True,
-                            key=f"docx_dl_{prefix}_{int(time.time())}"
-                        )
-                    except Exception as e:
-                        st.error(f"DOCX Error: {str(e)}")
+            # DOCX - Read pre-generated file
+            try:
+                with open(file_paths['docx'], "rb") as f:
+                    docx_data = f.read()
+                st.download_button(
+                    label="Word Document (.docx)",
+                    data=docx_data,
+                    file_name=os.path.basename(file_paths['docx']),
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                    key=f"{key_prefix}_dl_docx"
+                )
+            except Exception as e:
+                st.error(f"DOCX Error: {str(e)}")
 
     with col2:
         with st.popover("📧 Email"):
             st.markdown("### Email Settings")
-            sender_email = st.text_input("Sender Email", placeholder="you@gmail.com")
-            sender_password = st.text_input("App Password", type="password", help="Use App Password for Gmail")
-            recipient = st.text_input("Recipient", placeholder="manager@company.com")
+            sender_email = st.text_input("Sender Email", placeholder="you@gmail.com", key=f"{key_prefix}_email_sender")
+            sender_password = st.text_input("App Password", type="password", help="Use App Password for Gmail", key=f"{key_prefix}_email_pass")
+            recipient = st.text_input("Recipient", placeholder="manager@company.com", key=f"{key_prefix}_email_recip")
             
-            if st.button("Send Email", use_container_width=True):
+            if st.button("Send Email", use_container_width=True, key=f"{key_prefix}_send_btn"):
                 if not sender_email or not sender_password or not recipient:
                     st.warning("All fields required.")
                 else:
@@ -230,15 +223,22 @@ with plan_tab:
 
                 st.write("Analyzing content and drafting plan...")
                 plan = llm.generate_project_plan(processed_data['combined_text'])
+                clean_plan = clean_markdown_display(plan)
                 
-                st.session_state['current_plan'] = clean_markdown_display(plan)
+                st.session_state['current_plan'] = clean_plan
+                
+                st.write("Preparing downloads...")
+                # Eager generation of all files
+                st.session_state['plan_files'] = output_gen.generate_all_formats(clean_plan, "project_plan")
+                
                 status.update(label="Plan Generated", state="complete", expanded=False)
 
     if 'current_plan' in st.session_state:
         st.divider()
         st.markdown(st.session_state['current_plan'])
         st.divider()
-        download_actions(st.session_state['current_plan'], "project_plan")
+        if 'plan_files' in st.session_state:
+            download_actions(st.session_state['plan_files'], st.session_state['current_plan'], "project_plan", "plan")
 
 # === TAB 2: STATUS REPORTS ===
 with report_tab:
@@ -269,6 +269,8 @@ with report_tab:
             # Clear previous states
             if 'current_report' in st.session_state:
                 del st.session_state['current_report']
+            if 'report_files' in st.session_state:
+                del st.session_state['report_files']
 
             with st.status("Initiating workflow...", expanded=True) as status:
                 
@@ -295,8 +297,14 @@ with report_tab:
                 status.write(f"Processing {list_count} lists and {card_count} cards...")
                 status.write("Generating Executive Summary & Risks...")
                 report = llm.generate_status_report(board_data)
+                clean_report = clean_markdown_display(report)
                 
-                st.session_state['current_report'] = clean_markdown_display(report)
+                st.session_state['current_report'] = clean_report
+                
+                st.write("Preparing downloads...")
+                # Eager generation of all files
+                st.session_state['report_files'] = output_gen.generate_all_formats(clean_report, "status_report")
+                
                 status.update(label="Complete", state="complete", expanded=False)
 
     # Display Report
@@ -309,4 +317,5 @@ with report_tab:
         st.divider()
         
         # Actions
-        download_actions(st.session_state['current_report'], "status_report")
+        if 'report_files' in st.session_state:
+            download_actions(st.session_state['report_files'], st.session_state['current_report'], "status_report", "report")
