@@ -1,22 +1,13 @@
 import os
+from datetime import datetime
 from openai import OpenAI
 from .prompts import STATUS_REPORT_PROMPT, PROJECT_PLAN_PROMPT
 
 class LLMHandler:
-    def __init__(self, provider='ollama', api_key=None):
-        self.provider = provider
-        
-        if provider == 'OpenAI':
-            # Use passed api_key if available, otherwise fallback to env var
-            self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
-            self.model = "gpt-4o"
-        else:
-            # Ollama configuration
-            self.client = OpenAI(
-                base_url="http://localhost:11434/v1",
-                api_key="ollama"  # required but unused by Ollama
-            )
-            self.model = "qwen3:8b"
+    def __init__(self, api_key=None, model="gpt-4o-mini"):
+        self.model = model
+        # Use passed api_key if available, otherwise fallback to env var
+        self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
 
     def generate_status_report(self, trello_data):
         """Generate weekly status report from Trello data"""
@@ -25,7 +16,8 @@ class LLMHandler:
             for list_name, cards in trello_data.items()
         ])
         
-        prompt = STATUS_REPORT_PROMPT.format(trello_data=formatted_data)
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        prompt = STATUS_REPORT_PROMPT.format(trello_data=formatted_data, date=current_date)
         
         return self._call_llm(prompt, "You are a helpful Technical Program Manager assistant.")
 

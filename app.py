@@ -42,40 +42,45 @@ with st.sidebar:
     
     # LLM Selection
     st.subheader("AI Model")
-    llm_provider = st.selectbox(
-        "Provider", 
-        ["Ollama (Local)", "OpenAI"],
-        help="Select 'OpenAI' for faster, high-quality results."
+    
+    model_options = {
+        "gpt-4o-mini": "Cheapest & Fast (Recommended)",
+        "gpt-3.5-turbo": "Standard Legacy",
+        "gpt-4o": "High Intelligence (Premium)"
+    }
+    
+    selected_model_key = st.selectbox(
+        "Select OpenAI Model", 
+        options=list(model_options.keys()),
+        format_func=lambda x: f"{x} - {model_options[x]}"
     )
     
-    api_key = None
-    if llm_provider == "OpenAI":
-        default_key = os.getenv("OPENAI_API_KEY", "")
-        api_key = st.text_input(
-            "OpenAI API Key", 
-            value=default_key, 
-            type="password",
-            placeholder="sk-..."
-        )
-        if not api_key:
-            st.warning("API Key required for OpenAI")
-    else:
-        st.info("Model: qwen3:8b")
+    if selected_model_key == "gpt-4o-mini":
+        st.success("✨ Best value for money!")
+
+    api_key = st.text_input(
+        "OpenAI API Key", 
+        type="password",
+        placeholder="sk-..."
+    )
+    
+    if not api_key:
+        st.warning("API Key required")
         
     st.divider()
 
     # Trello Configuration
     st.subheader("Connections")
-    trello_key = st.text_input("Trello API Key", value=os.getenv("TRELLO_API_KEY", ""), type="password")
-    trello_token = st.text_input("Trello Token", value=os.getenv("TRELLO_TOKEN", ""), type="password")
+    trello_key = st.text_input("Trello API Key", type="password", placeholder="Enter Trello API Key")
+    trello_token = st.text_input("Trello Token", type="password", placeholder="Enter Trello Token")
     
     st.divider()
-    st.markdown("v1.0.0")
+    st.markdown("v1.1.0")
 
 # Initialize Utils
 output_gen = OutputGenerator(output_dir='outputs')
-provider_code = "OpenAI" if llm_provider == "OpenAI" else "Ollama"
-llm = LLMHandler(provider=provider_code, api_key=api_key)
+doc_processor = DocumentProcessor()
+llm = LLMHandler(api_key=api_key, model=selected_model_key)
 
 # --- Main Content ---
 plan_tab, report_tab = st.tabs(["Project Planning", "Status Reports"])
@@ -91,22 +96,49 @@ with plan_tab:
         uploaded_files = st.file_uploader(
             "Upload Documents", 
             accept_multiple_files=True,
-            help="Supported formats: PDF, DOCX, TXT"
+            type=['pdf', 'docx', 'txt', 'xlsx', 'xls'],
+            help="Supported formats: PDF, DOCX, TXT, Excel"
         )
     
     with col2:
         st.info("Upload PRDs and Timeline documents for best results.")
 
     if st.button("Generate Plan", type="primary", disabled=not uploaded_files):
-        with st.status("Processing...", expanded=True) as status:
-            st.write("Reading documents...")
-            time.sleep(1.5)
-            st.write("Analyzing constraints...")
-            time.sleep(1.5)
-            st.write("Drafting timeline...")
-            time.sleep(1)
-            status.update(label="Backend Pending", state="error", expanded=True)
-        st.warning("Module under development.")
+        if not api_key:
+            st.error("Please provide OpenAI API Key.")
+        else:
+            with st.status("Processing...", expanded=True) as status:
+                st.write("Reading documents...")
+                processed_data = doc_processor.process_files(uploaded_files)
+                
+                # Show details of processed files
+                for text_file in processed_data['file_details']:
+                    if "Error" in text_file['status']:
+                        st.error(f"{text_file['name']}: {text_file['status']}")
+                    else:
+                        st.success(f"{text_file['name']}: {text_file['status']}")
+                
+                if not processed_data['combined_text']:
+                    status.update(label="No valid text found", state="error")
+                    st.stop()
+
+                st.write("Analyzing content and drafting plan...")
+                plan = llm.generate_project_plan(processed_data['combined_text'])
+                
+                st.session_state['current_plan'] = plan
+                status.update(label="Plan Generated", state="complete", expanded=False)
+
+    if 'current_plan' in st.session_state:
+        st.divider()
+        st.markdown(st.session_state['current_plan'])
+        
+        # Download button for Plan
+        st.download_button(
+            label="💾 Download Plan (Markdown)",
+            data=st.session_state['current_plan'],
+            file_name=f"project_plan_{datetime.now().strftime('%Y%m%d')}.md",
+            mime="text/markdown"
+        )
 
 # === TAB 2: STATUS REPORTS ===
 with report_tab:
@@ -117,15 +149,12 @@ with report_tab:
     with st.container():
         col_input, col_btn = st.columns([3, 1])
         with col_input:
-            default_board_id = os.getenv("TRELLO_BOARD_ID", "")
             board_id = st.text_input(
                 "Board ID", 
-                value=default_board_id, 
                 placeholder="Board ID or URL"
             )
         
         with col_btn:
-            # Vertical alignment spacer
             st.write("") 
             st.write("")
             generate_btn = st.button("Generate Report", type="primary")
@@ -134,21 +163,22 @@ with report_tab:
     if generate_btn:
         if not trello_key or not trello_token or not board_id:
             st.error("Please configure Trello credentials and Board ID.")
-        elif llm_provider == "OpenAI" and not api_key:
+        elif not api_key:
             st.error("OpenAI API Key is missing.")
         else:
+            # Clear previous states
             if 'current_report' in st.session_state:
                 del st.session_state['current_report']
+            if 'report_pdf' in st.session_state:
+                del st.session_state['report_pdf']
 
-            # Granular Status Updates with Delays
             with st.status("Initiating workflow...", expanded=True) as status:
                 
                 status.write("Connecting to Trello API...")
-                time.sleep(1.2)
+                time.sleep(1.0)
                 trello = TrelloClient(trello_key, trello_token)
                 
                 status.write("Fetching Board Data...")
-                time.sleep(1.5)
                 try:
                     board_data = trello.fetch_board_data(board_id)
                 except Exception as e:
@@ -165,11 +195,6 @@ with report_tab:
                 card_count = sum(len(cards) for cards in board_data.values())
                 
                 status.write(f"Processing {list_count} lists and {card_count} cards...")
-                time.sleep(1.5)
-                
-                status.write("Building context for LLM...")
-                time.sleep(1.0)
-                
                 status.write("Generating Executive Summary & Risks...")
                 report = llm.generate_status_report(board_data)
                 
@@ -187,21 +212,36 @@ with report_tab:
         
         # Actions
         st.subheader("Export & Share")
-        col_actions = st.columns(4)
+        col_actions = st.columns(3)
         
         with col_actions[0]:
-            if st.button("💾 Save Markdown"):
-                path = output_gen.save_markdown(st.session_state['current_report'], "status_report")
-                st.success(f"Saved MD: `{os.path.basename(path)}`")
+            st.download_button(
+                label="💾 Download Markdown",
+                data=st.session_state['current_report'],
+                file_name=f"status_report_{datetime.now().strftime('%Y%m%d')}.md",
+                mime="text/markdown"
+            )
 
         with col_actions[1]:
-            if st.button("📄 Save PDF"):
-                with st.spinner("Converting to PDF..."):
-                    try:
-                        path = output_gen.save_pdf(st.session_state['current_report'], "status_report")
-                        st.success(f"Saved PDF: `{os.path.basename(path)}`")
-                    except Exception as e:
-                        st.error(f"PDF Error: {str(e)}")
+            # PDF Generation
+            if 'report_pdf' not in st.session_state:
+                if st.button("📄 Prepare PDF"):
+                    with st.spinner("Converting to PDF..."):
+                        try:
+                            pdf_path = output_gen.save_pdf(st.session_state['current_report'], "status_report")
+                            with open(pdf_path, "rb") as f:
+                                st.session_state['report_pdf'] = f.read()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"PDF Error: {str(e)}")
+            
+            if 'report_pdf' in st.session_state:
+                st.download_button(
+                    label="⬇️ Download PDF",
+                    data=st.session_state['report_pdf'],
+                    file_name=f"status_report_{datetime.now().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf"
+                )
 
         with col_actions[2]:
             with st.popover("📧 Email Report"):
