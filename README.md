@@ -6,6 +6,16 @@ Mira is an intelligent Technical Program Management (TPM) assistant. It streamli
 
 ---
 
+## 🛠️ Tech Stack
+![Python](https://img.shields.io/badge/Python-3670A0?logo=python&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white)
+![Trello](https://img.shields.io/badge/Trello-0052CC?logo=trello&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-150458?logo=pandas&logoColor=white)
+![Gmail](https://img.shields.io/badge/Gmail-EA4335?logo=gmail&logoColor=white)
+
+---
+
 ## Key Features
 
 ### 1. 📅 Intelligent Project Planning
@@ -40,9 +50,9 @@ To use Mira, you simply need to enter your credentials in the sidebar configurat
     *   Generate a new password for "Mail" / "Mira Agent".
     *   Use this 16-character code in the "App Password" field in the UI.
 
-### generating a Project Plan
+### Generating a Project Plan
 1.  Go to the **Project Planning** tab.
-2.  Upload your project files (e.g., `Project_Scope.pdf`).
+2.  Upload your project files (e.g., `Project_Scope.pdf`, any docx, xlsx, txt and pdf files).
 3.  Click **Generate Plan**.
 4.  Review the plan and download it as a PDF or Word Doc.
 
