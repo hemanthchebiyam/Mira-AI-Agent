@@ -2,8 +2,15 @@ import os
 import re
 import markdown
 from datetime import datetime
-from xhtml2pdf import pisa
 from bs4 import BeautifulSoup
+
+# Optional import for PDF generation
+try:
+    from xhtml2pdf import pisa
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+    pisa = None
 
 class OutputGenerator:
     def __init__(self, output_dir='outputs'):
@@ -148,7 +155,27 @@ class OutputGenerator:
                 paragraph.add_run(part)
 
     def save_pdf(self, content, prefix="report"):
+        """
+        Save content as PDF. Requires xhtml2pdf package.
+        If not available, creates a placeholder file with instructions.
+        """
         path = self._get_paths(prefix, "pdf")
+        
+        if not PDF_AVAILABLE:
+            # Create a placeholder file with instructions
+            placeholder_text = f"""
+PDF generation requires xhtml2pdf package.
+
+To install:
+1. Install system dependencies: brew install cairo pkg-config
+2. Install Python package: pip install xhtml2pdf
+
+Original content (as text):
+{content}
+"""
+            with open(path, "w", encoding='utf-8') as f:
+                f.write(placeholder_text)
+            return path
         
         # Clean emojis specifically for PDF generation to avoid black boxes
         # This regex removes characters in the emoji range
