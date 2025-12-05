@@ -182,7 +182,7 @@ def download_actions(file_paths, content, prefix="report", key_prefix=""):
                             st.error(f"Failed: {msg}")
 
 # --- Main Content ---
-plan_tab, report_tab = st.tabs(["Project Planning", "Status Reports"])
+plan_tab, report_tab, actions_tab = st.tabs(["Project Planning", "Status Reports", "Board Actions"])
 
 # === TAB 1: PROJECT PLANNING ===
 with plan_tab:
@@ -319,3 +319,185 @@ with report_tab:
         # Actions
         if 'report_files' in st.session_state:
             download_actions(st.session_state['report_files'], st.session_state['current_report'], "status_report", "report")
+
+# === TAB 3: BOARD ACTIONS ===
+with actions_tab:
+    st.header("Trello Board Actions")
+    st.markdown("Create/update cards, add comments/checklists, and archive items.")
+
+    if not trello_key or not trello_token:
+        st.warning("Enter Trello credentials in the sidebar to enable actions.")
+        st.stop()
+
+    trello = TrelloClient(trello_key, trello_token)
+    default_board = board_input if 'board_input' in locals() else ""
+    actions_board_input = st.text_input(
+        "Board ID or URL",
+        value=default_board,
+        placeholder="e.g. abc123 or https://trello.com/b/abc123/board-name",
+        key="actions_board_input"
+    )
+
+    def parse_csv(raw):
+        return [item.strip() for item in raw.split(",") if item.strip()] if raw else None
+
+    # Load lists for selectors
+    col_lists_load = st.columns([1, 1, 2])
+    with col_lists_load[0]:
+        load_lists = st.button("Load Lists", use_container_width=True)
+
+    if load_lists:
+        with st.spinner("Fetching lists..."):
+            lists_resp = trello.get_lists(actions_board_input)
+        if isinstance(lists_resp, dict) and "error" in lists_resp:
+            st.error(lists_resp["error"])
+        else:
+            st.session_state['trello_lists'] = lists_resp
+            st.success(f"Loaded {len(lists_resp)} lists")
+
+    list_options = st.session_state.get('trello_lists', [])
+
+    def list_selector(label, key):
+        if list_options:
+            return st.selectbox(label, options=list_options, format_func=lambda l: l.get('name', ''), key=key)
+        return None
+
+    st.divider()
+    st.subheader("Create Card")
+    with st.form("create_card_form"):
+        selected_list = list_selector("Choose List (optional)", "create_list_select")
+        list_id_manual = st.text_input("List ID (if not selecting above)", key="create_list_manual")
+        list_id = (selected_list or {}).get('id') if selected_list else list_id_manual
+        card_name = st.text_input("Card Title", key="create_card_name")
+        card_desc = st.text_area("Description", key="create_card_desc")
+        due_text = st.text_input("Due Date (YYYY-MM-DD, optional)", key="create_card_due")
+        label_ids = st.text_input("Label IDs (comma-separated, optional)", key="create_label_ids")
+        member_ids = st.text_input("Member IDs (comma-separated, optional)", key="create_member_ids")
+        submit_create = st.form_submit_button("Create Card", type="primary", use_container_width=True)
+
+    if submit_create:
+        if not list_id or not card_name:
+            st.error("List ID and Card Title are required.")
+        else:
+            with st.spinner("Creating card..."):
+                resp = trello.create_card(
+                    list_id=list_id,
+                    name=card_name,
+                    desc=card_desc,
+                    due=due_text or None,
+                    label_ids=parse_csv(label_ids),
+                    member_ids=parse_csv(member_ids)
+                )
+            if isinstance(resp, dict) and "error" in resp:
+                st.error(resp["error"])
+            else:
+                st.success(f"Card created: {resp.get('name', '')} ({resp.get('id')})")
+
+    st.divider()
+    st.subheader("Update Card")
+    with st.form("update_card_form"):
+        card_id = st.text_input("Card ID", key="update_card_id")
+        new_name = st.text_input("New Title (optional)", key="update_card_name")
+        new_desc = st.text_area("New Description (optional)", key="update_card_desc")
+        new_due = st.text_input("New Due Date (YYYY-MM-DD, optional)", key="update_card_due")
+        move_list = list_selector("Move to List (optional)", "update_list_select")
+        move_list_manual = st.text_input("Move to List ID (if not selecting above)", key="update_list_manual")
+        move_list_id = (move_list or {}).get('id') if move_list else move_list_manual
+        update_labels = st.text_input("Replace Label IDs (comma-separated, optional)", key="update_label_ids")
+        update_members = st.text_input("Replace Member IDs (comma-separated, optional)", key="update_member_ids")
+        submit_update = st.form_submit_button("Update Card", use_container_width=True)
+
+    if submit_update:
+        if not card_id:
+            st.error("Card ID is required.")
+        else:
+            with st.spinner("Updating card..."):
+                resp = trello.update_card(
+                    card_id=card_id,
+                    name=new_name or None,
+                    desc=new_desc or None,
+                    due=new_due or None,
+                    list_id=move_list_id or None,
+                    label_ids=parse_csv(update_labels),
+                    member_ids=parse_csv(update_members)
+                )
+            if isinstance(resp, dict) and "error" in resp:
+                st.error(resp["error"])
+            else:
+                st.success(f"Card updated: {resp.get('name', '')}")
+
+    st.divider()
+    st.subheader("Comments & Checklist")
+    with st.form("comment_form"):
+        comment_card_id = st.text_input("Card ID", key="comment_card_id")
+        comment_text = st.text_area("Comment", key="comment_text")
+        submit_comment = st.form_submit_button("Add Comment", use_container_width=True)
+
+    if submit_comment:
+        if not comment_card_id or not comment_text:
+            st.error("Card ID and comment are required.")
+        else:
+            with st.spinner("Adding comment..."):
+                resp = trello.add_comment(comment_card_id, comment_text)
+            if isinstance(resp, dict) and "error" in resp:
+                st.error(resp["error"])
+            else:
+                st.success("Comment added.")
+
+    with st.form("checklist_form"):
+        checklist_card_id = st.text_input("Card ID", key="checklist_card_id")
+        checklist_name = st.text_input("Checklist Name", key="checklist_name")
+        checklist_item = st.text_input("Checklist Item", key="checklist_item")
+        checklist_checked = st.checkbox("Mark item complete", key="checklist_checked")
+        submit_checklist = st.form_submit_button("Add Checklist Item", use_container_width=True)
+
+    if submit_checklist:
+        if not checklist_card_id or not checklist_name or not checklist_item:
+            st.error("Card ID, checklist name, and item are required.")
+        else:
+            with st.spinner("Adding checklist item..."):
+                resp = trello.add_checklist_item(
+                    checklist_card_id,
+                    checklist_name,
+                    checklist_item,
+                    checked=checklist_checked
+                )
+            if isinstance(resp, dict) and "error" in resp:
+                st.error(resp["error"])
+            else:
+                st.success("Checklist item added.")
+
+    st.divider()
+    st.subheader("Archive / Restore")
+    col_archive = st.columns(2)
+    with col_archive[0]:
+        with st.form("archive_card_form"):
+            archive_card_id = st.text_input("Card ID", key="archive_card_id")
+            archive_card = st.checkbox("Archive card (uncheck to restore)", value=True, key="archive_card_flag")
+            submit_archive_card = st.form_submit_button("Update Card Archive State", use_container_width=True)
+    if submit_archive_card:
+        if not archive_card_id:
+            st.error("Card ID is required.")
+        else:
+            with st.spinner("Updating card state..."):
+                resp = trello.close_card(archive_card_id, closed=archive_card)
+            if isinstance(resp, dict) and "error" in resp:
+                st.error(resp["error"])
+            else:
+                st.success("Card state updated.")
+
+    with col_archive[1]:
+        with st.form("archive_list_form"):
+            archive_list_id = st.text_input("List ID", key="archive_list_id")
+            archive_list = st.checkbox("Archive list (uncheck to restore)", value=True, key="archive_list_flag")
+            submit_archive_list = st.form_submit_button("Update List Archive State", use_container_width=True)
+    if submit_archive_list:
+        if not archive_list_id:
+            st.error("List ID is required.")
+        else:
+            with st.spinner("Updating list state..."):
+                resp = trello.close_list(archive_list_id, closed=archive_list)
+            if isinstance(resp, dict) and "error" in resp:
+                st.error(resp["error"])
+            else:
+                st.success("List state updated.")
