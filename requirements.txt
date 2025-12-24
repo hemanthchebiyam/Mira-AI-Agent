@@ -3,8 +3,8 @@ python-dotenv>=1.0.0
 openai>=1.3.0
 requests>=2.31.0
 markdown>=3.5.0
-xhtml2pdf>=0.2.11
 PyPDF2>=3.0.0
+pdfplumber>=0.10.0
 python-docx>=1.1.0
 pandas>=2.1.0
 openpyxl>=3.1.0
@@ -15,3 +15,7 @@ langchain>=0.3.0
 langchain-openai>=0.2.0
 langchain-community>=0.3.0
 faiss-cpu>=1.7.0
+chardet>=5.0.0
+# Optional packages (install separately if needed):
+# xhtml2pdf>=0.2.11  # For PDF output generation (requires: brew install cairo pkg-config)
+# pymupdf>=1.23.0    # Alternative PDF parser (requires: brew install cairo pkg-config)
