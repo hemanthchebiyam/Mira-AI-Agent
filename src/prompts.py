@@ -13,17 +13,17 @@ Generate a weekly status report with these sections:
 1. Header: Project Name and Date ({date})
 2. Executive Summary (2-3 sentences)
 3. Progress This Week
-   - Completed Tasks
-   - In Progress Tasks
+   - Completed Tasks (prefix with ✅)
+   - In Progress Tasks (prefix with 🔄)
 4. Blockers and Risks
-   - Active Blockers
-   - Upcoming Risks
+   - Active Blockers (prefix with 🚫)
+   - Upcoming Risks (prefix with ⚠️)
 5. Next Week Priorities
 6. Team Health and Notes
 
-Format: Professional email-ready markdown
+Format: Professional email-ready markdown using text and emoji only (NO external images or links)
 Tone: Clear, concise, executive-friendly
-Highlight: Color codes for Completed tasks (Green), In Progress Tasks (Yellow), Blockers and Risks (Red)
+Status indicators: Use emoji prefixes (✅ completed, 🔄 in progress, 🚫 blocked, ⚠️ at risk)
 """
 
 PROJECT_PLAN_PROMPT = """

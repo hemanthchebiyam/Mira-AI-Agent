@@ -3,3 +3,7 @@ src/__pycache__/
 *.pyc 
 input_files/
 presentation_content.md
+outputs/
+chroma_db/
+__pycache__/
+.chroma/

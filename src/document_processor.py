@@ -3,10 +3,22 @@ import io
 import PyPDF2
 import docx
 import pandas as pd
+from typing import List, Optional
+
+# LangChain imports for RAG
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
 
 class DocumentProcessor:
     def __init__(self):
-        pass
+        self.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200,
+            length_function=len,
+            separators=["\n\n", "\n", ". ", " ", ""]
+        )
         
     def process_files(self, uploaded_files):
         """
@@ -86,3 +98,107 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error reading Excel: {str(e)}"
         return text
+
+    def process_files_to_documents(self, uploaded_files) -> List[Document]:
+        """
+        Process uploaded files and return LangChain Document objects.
+        Each document chunk includes metadata about the source file.
+        """
+        all_documents = []
+        
+        for uploaded_file in uploaded_files:
+            file_name = uploaded_file.name
+            file_ext = os.path.splitext(file_name)[1].lower()
+            content = ""
+            
+            try:
+                # Reset file pointer before reading
+                uploaded_file.seek(0)
+                
+                if file_ext == '.pdf':
+                    content = self._read_pdf(uploaded_file)
+                elif file_ext == '.docx':
+                    content = self._read_docx(uploaded_file)
+                elif file_ext == '.txt':
+                    content = self._read_txt(uploaded_file)
+                elif file_ext in ['.xlsx', '.xls']:
+                    content = self._read_excel(uploaded_file)
+                else:
+                    continue  # Skip unsupported formats
+                
+                if content and content.strip() and not content.startswith("Error"):
+                    # Split content into chunks
+                    chunks = self.text_splitter.split_text(content)
+                    
+                    # Create Document objects with metadata
+                    for i, chunk in enumerate(chunks):
+                        doc = Document(
+                            page_content=chunk,
+                            metadata={
+                                "source": file_name,
+                                "chunk_index": i,
+                                "total_chunks": len(chunks)
+                            }
+                        )
+                        all_documents.append(doc)
+                        
+            except Exception as e:
+                # Log error but continue processing other files
+                print(f"Error processing {file_name}: {str(e)}")
+                continue
+        
+        return all_documents
+
+    def create_vector_store_simple(self, uploaded_files, api_key: str):
+        """
+        Create a simple in-memory vector store using FAISS (more stable than ChromaDB).
+        
+        Args:
+            uploaded_files: List of Streamlit UploadedFile objects
+            api_key: OpenAI API key for embeddings
+            
+        Returns:
+            FAISS vector store instance or None if no documents
+        """
+        
+        
+        # Process files into LangChain Documents
+        documents = self.process_files_to_documents(uploaded_files)
+        
+        if not documents:
+            return None
+        
+        # Create embeddings
+        embeddings = OpenAIEmbeddings(api_key=api_key)
+        
+        # Create FAISS vector store (simpler, no external dependencies)
+        vector_store = FAISS.from_documents(
+            documents=documents,
+            embedding=embeddings
+        )
+        
+        return vector_store
+    
+    def get_combined_text_from_documents(self, documents: List[Document]) -> str:
+        """
+        Combine all document chunks back into a single text string.
+        Useful for the Project Plan generation that needs full context.
+        """
+        if not documents:
+            return ""
+        
+        # Group by source file to maintain structure
+        sources = {}
+        for doc in documents:
+            source = doc.metadata.get("source", "Unknown")
+            if source not in sources:
+                sources[source] = []
+            sources[source].append(doc.page_content)
+        
+        # Combine with source headers
+        combined = ""
+        for source, chunks in sources.items():
+            combined += f"\n\n--- Content from {source} ---\n"
+            combined += "\n".join(chunks)
+        
+        return combined.strip()

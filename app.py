@@ -1,11 +1,14 @@
-import streamlit as st
+# Fix OpenMP conflict on Windows (must be before other imports)
 import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+import streamlit as st
 import time
 import re
 from datetime import datetime
 from dotenv import load_dotenv
 from src.trello_client import TrelloClient
-from src.llm_handler import LLMHandler
+from src.llm_handler import LLMHandler, AgenticLLMHandler
 from src.output_generator import OutputGenerator
 from src.email_service import EmailService
 from src.document_processor import DocumentProcessor
@@ -20,7 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for cleaner look
+# Custom CSS for cleaner look with chat styling
 st.markdown("""
     <style>
     .stButton button {
@@ -30,6 +33,41 @@ st.markdown("""
     }
     .block-container {
         padding-top: 2rem;
+    }
+    
+    /* Chat styling */
+    .chat-container {
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Upload zone styling for AI tab */
+    .upload-zone {
+        border: 2px dashed #4a4a4a;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+    
+    /* Agent status indicator */
+    .agent-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+    .agent-ready {
+        background: linear-gradient(90deg, #00b894, #00cec9);
+        color: white;
+    }
+    .agent-not-ready {
+        background: linear-gradient(90deg, #e17055, #d63031);
+        color: white;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -79,13 +117,64 @@ with st.sidebar:
     trello_token = st.text_input("Trello Token", type="password", placeholder="Enter Trello Token")
     
     st.divider()
-    st.markdown("v1.2.0")
+    st.markdown("v2.0.0 - LangChain Agentic RAG")
 
 # Initialize Utils
 output_gen = OutputGenerator(output_dir='outputs')
 doc_processor = DocumentProcessor()
-# Initialize LLM Handler without crashing if key is missing
+# Initialize LLM Handler without crashing if key is missing (for existing tabs)
 llm = LLMHandler(api_key=api_key, model=selected_model_key)
+
+# ============================================================================
+# Session State Callbacks for Agent Tools
+# ============================================================================
+
+def set_session_state(key: str, value):
+    """Callback for tools to save content to session state."""
+    st.session_state[key] = value
+    # Also trigger file generation
+    if key == 'current_plan' and value:
+        st.session_state['plan_files'] = output_gen.generate_all_formats(
+            clean_markdown_display(value), "project_plan"
+        )
+        st.session_state['agent_generated_plan'] = True
+    elif key == 'current_report' and value:
+        st.session_state['report_files'] = output_gen.generate_all_formats(
+            clean_markdown_display(value), "status_report"
+        )
+        st.session_state['agent_generated_report'] = True
+
+def get_session_state(key: str):
+    """Callback for tools to retrieve content from session state."""
+    return st.session_state.get(key)
+
+# ============================================================================
+# Initialize Agentic LLM Handler (for AI Assistant tab)
+# ============================================================================
+
+def get_agentic_handler():
+    """Get or create the agentic handler in session state."""
+    # Check if we need to create/recreate the handler
+    current_config = f"{api_key}_{selected_model_key}_{trello_key}_{trello_token}"
+    
+    if 'agentic_llm' not in st.session_state or st.session_state.get('agentic_config') != current_config:
+        if api_key:
+            st.session_state.agentic_llm = AgenticLLMHandler(
+                api_key=api_key,
+                model=selected_model_key,
+                trello_api_key=trello_key,
+                trello_token=trello_token,
+                session_state_callback=set_session_state,
+                get_content_callback=get_session_state
+            )
+            st.session_state.agentic_config = current_config
+        else:
+            st.session_state.agentic_llm = None
+    
+    return st.session_state.get('agentic_llm')
+
+# Get or create the agentic handler
+agentic_llm = get_agentic_handler()
 
 def clean_markdown_display(content):
     """Helper to remove ```markdown from the start for cleaner display"""
@@ -182,9 +271,9 @@ def download_actions(file_paths, content, prefix="report", key_prefix=""):
                             st.error(f"Failed: {msg}")
 
 # --- Main Content ---
-plan_tab, report_tab = st.tabs(["Project Planning", "Status Reports"])
+plan_tab, report_tab, ai_tab = st.tabs(["📋 Project Planning", "📊 Status Reports", "🤖 AI Assistant"])
 
-# === TAB 1: PROJECT PLANNING ===
+# === TAB 1: PROJECT PLANNING (Unchanged) ===
 with plan_tab:
     st.header("Project Planning")
     st.markdown("Upload requirements to generate execution plans.")
@@ -196,13 +285,14 @@ with plan_tab:
             "Upload Documents", 
             accept_multiple_files=True,
             type=['pdf', 'docx', 'txt', 'xlsx', 'xls'],
-            help="Supported formats: PDF, DOCX, TXT, Excel"
+            help="Supported formats: PDF, DOCX, TXT, Excel",
+            key="plan_tab_uploader"
         )
     
     with col2:
         st.info("Upload PRDs and Timeline documents for best results.")
 
-    if st.button("Generate Plan", type="primary", disabled=not uploaded_files):
+    if st.button("Generate Plan", type="primary", disabled=not uploaded_files, key="gen_plan_btn"):
         if not api_key:
             st.error("Please provide OpenAI API Key.")
         else:
@@ -240,7 +330,7 @@ with plan_tab:
         if 'plan_files' in st.session_state:
             download_actions(st.session_state['plan_files'], st.session_state['current_plan'], "project_plan", "plan")
 
-# === TAB 2: STATUS REPORTS ===
+# === TAB 2: STATUS REPORTS (Unchanged) ===
 with report_tab:
     st.header("Status Reporting")
     st.markdown("Generate weekly reports from Trello activity.")
@@ -251,13 +341,14 @@ with report_tab:
         with col_input:
             board_input = st.text_input(
                 "Board ID or URL", 
-                placeholder="e.g. Qwertyui or https://trello.com/b/..."
+                placeholder="e.g. Qwertyui or https://trello.com/b/...",
+                key="report_tab_board"
             )
         
         with col_btn:
             st.write("") 
             st.write("")
-            generate_btn = st.button("Generate Report", type="primary")
+            generate_btn = st.button("Generate Report", type="primary", key="gen_report_btn")
 
     # Generation Logic
     if generate_btn:
@@ -319,3 +410,197 @@ with report_tab:
         # Actions
         if 'report_files' in st.session_state:
             download_actions(st.session_state['report_files'], st.session_state['current_report'], "status_report", "report")
+
+# === TAB 3: AI ASSISTANT (New LangChain Agentic RAG) ===
+with ai_tab:
+    st.header("🤖 AI Assistant")
+    st.markdown("Chat with Mira - your intelligent TPM assistant with RAG capabilities.")
+    
+    # Initialize chat history in session state
+    if 'chat_messages' not in st.session_state:
+        st.session_state.chat_messages = []
+    
+    # -------------------------------------------------------------------------
+    # Document Upload Section with AUTO-INDEXING
+    # -------------------------------------------------------------------------
+    with st.expander("📁 Upload Project Documents", expanded=('vector_store' not in st.session_state)):
+        ai_uploaded_files = st.file_uploader(
+            "Upload documents for intelligent Q&A (auto-indexed)",
+            accept_multiple_files=True,
+            type=['pdf', 'docx', 'txt', 'xlsx', 'xls'],
+            help="Supported: PDF, DOCX, TXT, Excel. Documents are automatically indexed when uploaded.",
+            key="ai_tab_uploader"
+        )
+        
+        # Auto-index when files are uploaded
+        if ai_uploaded_files:
+            # Create a hash of current files to detect changes
+            current_files_hash = hash(tuple(f.name + str(f.size) for f in ai_uploaded_files))
+            previous_hash = st.session_state.get('files_hash', None)
+            
+            # Only re-index if files changed
+            if current_files_hash != previous_hash:
+                if not api_key:
+                    st.warning("⚠️ Enter your OpenAI API Key in the sidebar to enable document indexing.")
+                else:
+                    with st.spinner(f"📚 Indexing {len(ai_uploaded_files)} document(s)..."):
+                        try:
+                            # Create vector store using FAISS (simpler than ChromaDB)
+                            vector_store = doc_processor.create_vector_store_simple(ai_uploaded_files, api_key)
+                            
+                            if vector_store:
+                                st.session_state.vector_store = vector_store
+                                st.session_state.files_hash = current_files_hash
+                                st.session_state.indexed_files = [f.name for f in ai_uploaded_files]
+                                
+                                # Update agent's vector store
+                                current_handler = get_agentic_handler()
+                                if current_handler:
+                                    current_handler.set_vector_store(vector_store)
+                                
+                                st.success(f"✅ Indexed {len(ai_uploaded_files)} document(s). Ready to chat!")
+                            else:
+                                st.error("❌ No valid content found in the uploaded files.")
+                        except Exception as e:
+                            st.error(f"❌ Error indexing: {str(e)}")
+            else:
+                # Files already indexed
+                st.success(f"✅ {len(ai_uploaded_files)} document(s) indexed: {', '.join(st.session_state.get('indexed_files', []))}")
+        else:
+            # No files uploaded - clear vector store
+            if 'vector_store' in st.session_state:
+                del st.session_state['vector_store']
+                st.session_state.pop('files_hash', None)
+                st.session_state.pop('indexed_files', None)
+    
+    # -------------------------------------------------------------------------
+    # Status Bar
+    # -------------------------------------------------------------------------
+    col_status1, col_status2 = st.columns(2)
+    with col_status1:
+        if api_key:
+            st.success("🟢 Agent Ready")
+        else:
+            st.error("🔴 API Key Required")
+    with col_status2:
+        if 'vector_store' in st.session_state:
+            st.info(f"📚 {len(st.session_state.get('indexed_files', []))} docs indexed")
+        else:
+            st.warning("📄 No documents loaded")
+    
+    st.divider()
+    
+    # -------------------------------------------------------------------------
+    # Chat Interface
+    # -------------------------------------------------------------------------
+    chat_container = st.container()
+    
+    with chat_container:
+        # Display chat messages
+        for i, message in enumerate(st.session_state.chat_messages):
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+                
+                # Show download actions if this message generated a plan or report
+                if message["role"] == "assistant":
+                    if message.get("has_plan") and 'plan_files' in st.session_state:
+                        st.divider()
+                        download_actions(
+                            st.session_state['plan_files'], 
+                            st.session_state.get('current_plan', ''), 
+                            "project_plan", 
+                            f"chat_plan_{i}"
+                        )
+                    elif message.get("has_report") and 'report_files' in st.session_state:
+                        st.divider()
+                        download_actions(
+                            st.session_state['report_files'], 
+                            st.session_state.get('current_report', ''), 
+                            "status_report", 
+                            f"chat_report_{i}"
+                        )
+    
+    # Chat Input - Handle new prompts
+    if prompt := st.chat_input("Ask Mira anything about your project...", key="chat_input"):
+        if not api_key:
+            st.error("⚠️ Please enter your OpenAI API Key in the sidebar.")
+        else:
+            # Add user message and set pending flag for response generation
+            st.session_state.chat_messages.append({"role": "user", "content": prompt})
+            st.session_state['pending_prompt'] = prompt
+            st.rerun()  # Rerun to show user message immediately
+    
+    # Generate response if there's a pending prompt
+    if st.session_state.get('pending_prompt'):
+        current_handler = get_agentic_handler()
+        if not current_handler:
+            st.error("⚠️ Agent not initialized. Please check your API key.")
+            st.session_state.pop('pending_prompt', None)
+        else:
+            # Reset generation flags
+            st.session_state['agent_generated_plan'] = False
+            st.session_state['agent_generated_report'] = False
+            
+            # Show thinking indicator and generate response
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    response = current_handler.chat(st.session_state['pending_prompt'])
+                st.markdown(response)
+            
+            # Check if plan or report was generated
+            message_data = {"role": "assistant", "content": response}
+            
+            if st.session_state.get('agent_generated_plan'):
+                message_data["has_plan"] = True
+            
+            if st.session_state.get('agent_generated_report'):
+                message_data["has_report"] = True
+            
+            # Add assistant response to history and clear pending
+            st.session_state.chat_messages.append(message_data)
+            st.session_state.pop('pending_prompt', None)
+            st.rerun()  # Rerun to properly display in chat history
+    
+    # Sidebar actions for AI tab
+    with st.sidebar:
+        st.divider()
+        st.subheader("AI Assistant Actions")
+        
+        if st.button("🗑️ Clear Chat History", key="clear_chat_btn"):
+            st.session_state.chat_messages = []
+            current_handler = get_agentic_handler()
+            if current_handler:
+                current_handler.clear_memory()
+            st.rerun()
+        
+        if st.button("🔄 Reset Knowledge Base", key="reset_kb_btn"):
+            st.session_state.pop('vector_store', None)
+            st.session_state.pop('files_hash', None)
+            st.session_state.pop('indexed_files', None)
+            current_handler = get_agentic_handler()
+            if current_handler:
+                current_handler.set_vector_store(None)
+            st.rerun()
+    
+    # Example prompts for new users
+    if not st.session_state.chat_messages:
+        st.markdown("---")
+        st.markdown("### 💡 Try asking Mira:")
+        
+        example_cols = st.columns(2)
+        
+        with example_cols[0]:
+            st.markdown("""
+            **📄 Document Questions:**
+            - "What are the key milestones?"
+            - "Who is responsible for phase 2?"
+            - "Summarize the project scope"
+            """)
+            
+        with example_cols[1]:
+            st.markdown("""
+            **📊 Actions:**
+            - "Generate a project plan"
+            - "Create a status report for [board URL]"
+            - "What tasks are in progress?"
+            """)
