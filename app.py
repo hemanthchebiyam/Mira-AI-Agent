@@ -117,7 +117,7 @@ with st.sidebar:
     trello_token = st.text_input("Trello Token", type="password", placeholder="Enter Trello Token")
     
     st.divider()
-    st.markdown("v2.0.0 - LangChain Agentic RAG")
+    st.markdown("v2.2.0 - LangChain RAG")
 
 # Initialize Utils
 output_gen = OutputGenerator(output_dir='outputs')
@@ -423,7 +423,8 @@ with ai_tab:
     # -------------------------------------------------------------------------
     # Document Upload Section with AUTO-INDEXING
     # -------------------------------------------------------------------------
-    with st.expander("📁 Upload Project Documents", expanded=('vector_store' not in st.session_state)):
+    with st.expander("📁 Project Documents", expanded=('vector_store' not in st.session_state)):
+        
         ai_uploaded_files = st.file_uploader(
             "Upload documents for intelligent Q&A (auto-indexed)",
             accept_multiple_files=True,
@@ -466,8 +467,9 @@ with ai_tab:
             else:
                 # Files already indexed
                 st.success(f"✅ {len(ai_uploaded_files)} document(s) indexed: {', '.join(st.session_state.get('indexed_files', []))}")
-        else:
-            # No files uploaded - clear vector store
+        
+        # Clear vector store if no files
+        if not ai_uploaded_files:
             if 'vector_store' in st.session_state:
                 del st.session_state['vector_store']
                 st.session_state.pop('files_hash', None)

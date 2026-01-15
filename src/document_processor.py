@@ -3,13 +3,32 @@ import io
 import re
 import chardet
 import pandas as pd
-from typing import List, Optional
+from typing import List, Optional, Tuple, Dict, Any
+
+# PDF Parsers - try multiple options
+PDF_PARSER = None
+try:
+    import pdfplumber
+    PDF_PARSER = 'pdfplumber'
+except ImportError:
+    try:
+        import PyPDF2
+        PDF_PARSER = 'pypdf2'
+    except ImportError:
+        pass
+
+# DOCX parser
+try:
+    import docx
+except ImportError:
+    docx = None
 
 # LangChain imports for RAG
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
+
 
 class DocumentProcessor:
     def __init__(self):
@@ -91,10 +110,10 @@ class DocumentProcessor:
             "file_details": file_details
         }
 
-    def _read_pdf(self, file):
+    def _read_pdf(self, file) -> Tuple[str, Dict[str, Any]]:
         """
         Read PDF file with improved text extraction.
-        Tries pdfplumber first, then pymupdf, then PyPDF2 as fallback.
+        Tries pdfplumber first, then PyPDF2 as fallback.
         
         Returns:
             tuple: (text_content, metadata_dict)
@@ -107,6 +126,7 @@ class DocumentProcessor:
             file.seek(0)
             
             if PDF_PARSER == 'pdfplumber':
+                import pdfplumber
                 with pdfplumber.open(file) as pdf:
                     metadata['pages'] = len(pdf.pages)
                     metadata['parser'] = 'pdfplumber'
@@ -126,23 +146,8 @@ class DocumentProcessor:
                                         text += " | ".join(str(cell) if cell else "" for cell in row) + "\n"
                                 text += "\n"
             
-            elif PDF_PARSER == 'pymupdf':
-                import fitz  # PyMuPDF
-                file.seek(0)
-                pdf_bytes = file.read()
-                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-                metadata['pages'] = len(doc)
-                metadata['parser'] = 'pymupdf'
-                
-                for page_num in range(len(doc)):
-                    page = doc[page_num]
-                    page_text = page.get_text()
-                    if page_text:
-                        text += f"\n[Page {page_num+1}]\n{page_text}\n"
-                
-                doc.close()
-            
-            else:  # PyPDF2 fallback
+            elif PDF_PARSER == 'pypdf2':
+                import PyPDF2
                 file.seek(0)
                 pdf_reader = PyPDF2.PdfReader(file)
                 metadata['pages'] = len(pdf_reader.pages)
@@ -153,6 +158,9 @@ class DocumentProcessor:
                     if page_text:
                         text += f"\n[Page {i+1}]\n{page_text}\n"
             
+            else:
+                return "Error: No PDF parser available. Install pdfplumber or PyPDF2.", {"error": "No PDF parser"}
+            
             # Clean up excessive whitespace
             text = re.sub(r'\n{3,}', '\n\n', text)
             
@@ -161,7 +169,7 @@ class DocumentProcessor:
         
         return text.strip(), metadata
 
-    def _read_docx(self, file):
+    def _read_docx(self, file) -> Tuple[str, Dict[str, Any]]:
         """
         Read DOCX file with support for paragraphs, tables, lists, and formatting.
         
@@ -170,6 +178,9 @@ class DocumentProcessor:
         """
         text = ""
         metadata = {}
+        
+        if docx is None:
+            return "Error: python-docx not installed", {"error": "python-docx not installed"}
         
         try:
             file.seek(0)
@@ -210,7 +221,7 @@ class DocumentProcessor:
         
         return text.strip(), metadata
 
-    def _read_txt(self, file):
+    def _read_txt(self, file) -> Tuple[str, Dict[str, Any]]:
         """
         Read TXT file with automatic encoding detection.
         
@@ -247,7 +258,7 @@ class DocumentProcessor:
         
         return text.strip(), metadata
 
-    def _read_excel(self, file):
+    def _read_excel(self, file) -> Tuple[str, Dict[str, Any]]:
         """
         Read Excel file with improved structure preservation.
         Handles multiple sheets, preserves table structure, and extracts metadata.
@@ -262,7 +273,6 @@ class DocumentProcessor:
             file.seek(0)
             
             # Determine engine based on file extension
-            # Try openpyxl for .xlsx, xlrd for .xls (if available)
             file_ext = getattr(file, 'name', '').lower()
             engine = 'openpyxl' if file_ext.endswith('.xlsx') else None
             
@@ -287,11 +297,9 @@ class DocumentProcessor:
                 text += "Columns: " + ", ".join(str(col) for col in df.columns) + "\n\n"
                 
                 # Convert DataFrame to string with better formatting
-                # For small tables, use to_string
                 if len(df) <= 100:
                     text += df.to_string(index=False, max_rows=None) + "\n\n"
                 else:
-                    # For large tables, show first and last few rows
                     text += "[First 50 rows]\n"
                     text += df.head(50).to_string(index=False) + "\n\n"
                     text += f"[... {len(df) - 100} rows omitted ...]\n\n"
@@ -308,8 +316,9 @@ class DocumentProcessor:
             excel_file.close()
             
         except Exception as e:
-            return f"Error reading Excel: {str(e)}"
-        return text
+            return f"Error reading Excel: {str(e)}", {"error": str(e)}
+        
+        return text.strip(), metadata
 
     def process_files_to_documents(self, uploaded_files) -> List[Document]:
         """
@@ -327,14 +336,15 @@ class DocumentProcessor:
                 # Reset file pointer before reading
                 uploaded_file.seek(0)
                 
+                # All read methods return (content, metadata) tuple
                 if file_ext == '.pdf':
-                    content = self._read_pdf(uploaded_file)
+                    content, _ = self._read_pdf(uploaded_file)
                 elif file_ext == '.docx':
-                    content = self._read_docx(uploaded_file)
+                    content, _ = self._read_docx(uploaded_file)
                 elif file_ext == '.txt':
-                    content = self._read_txt(uploaded_file)
+                    content, _ = self._read_txt(uploaded_file)
                 elif file_ext in ['.xlsx', '.xls']:
-                    content = self._read_excel(uploaded_file)
+                    content, _ = self._read_excel(uploaded_file)
                 else:
                     continue  # Skip unsupported formats
                 
@@ -372,8 +382,6 @@ class DocumentProcessor:
         Returns:
             FAISS vector store instance or None if no documents
         """
-        
-        
         # Process files into LangChain Documents
         documents = self.process_files_to_documents(uploaded_files)
         

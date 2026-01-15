@@ -16,6 +16,7 @@ langchain-openai>=0.2.0
 langchain-community>=0.3.0
 faiss-cpu>=1.7.0
 chardet>=5.0.0
+
 # Optional packages (install separately if needed):
 # xhtml2pdf>=0.2.11  # For PDF output generation (requires: brew install cairo pkg-config)
 # pymupdf>=1.23.0    # Alternative PDF parser (requires: brew install cairo pkg-config)
