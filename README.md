@@ -6,6 +6,30 @@ Mira is an intelligent Technical Program Management (TPM) assistant powered by *
 
 ---
 
+## 🆕 Version 2.2.0 Updates
+
+### 🤖 AI Assistant Tab (Enhanced)
+The AI Assistant has been streamlined with a cleaner, more focused interface:
+
+- **Simplified Document Upload:** Direct local file upload with automatic indexing
+- **Agentic RAG Architecture:** LangChain-powered agent with tool-calling capabilities
+- **Smart Document Search:** Semantic search across all uploaded project documents
+- **Integrated Actions:** Generate project plans and status reports directly from chat
+- **Conversation Memory:** Multi-turn conversations with context retention
+- **Source Citations:** Every answer references the specific document it came from
+
+### 📋 Board Actions Tab (New)
+Full CRUD operations for Trello board management:
+
+- **Create Cards:** Add new cards with titles, descriptions, due dates, labels, and members
+- **Update Cards:** Modify existing cards, move between lists, update details
+- **Comments:** Add comments to any card for team collaboration
+- **Checklists:** Create checklists and add items with completion status
+- **Archive/Restore:** Archive or restore both cards and lists
+- **List Selector:** Load and select lists from dropdown for easier navigation
+
+---
+
 ## 🛠️ Tech Stack
 
 ![Python](https://img.shields.io/badge/Python-3670A0?logo=python&logoColor=white)
@@ -13,7 +37,6 @@ Mira is an intelligent Technical Program Management (TPM) assistant powered by *
 ![OpenAI](https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?logo=langchain&logoColor=white)
 ![FAISS](https://img.shields.io/badge/FAISS-00ADD8?logo=meta&logoColor=white)
-![Google Drive](https://img.shields.io/badge/Google%20Drive-4285F4?logo=googledrive&logoColor=white)
 ![Trello](https://img.shields.io/badge/Trello-0052CC?logo=trello&logoColor=white)
 ![Gmail](https://img.shields.io/badge/Gmail-EA4335?logo=gmail&logoColor=white)
 
@@ -22,22 +45,15 @@ Mira is an intelligent Technical Program Management (TPM) assistant powered by *
 ## ✨ Key Features
 
 ### 1. 🤖 AI Assistant (LangChain Agentic RAG)
-**Chat with your project documents using natural language.** Upload files or connect Google Drive, and Mira will intelligently answer questions with source citations.
+**Chat with your project documents using natural language.** Upload files and Mira will intelligently answer questions with source citations.
 
 - **Document Q&A:** "What are the key milestones?" / "Who is responsible for Phase 2?"
 - **Auto-Indexing:** Documents are automatically vectorized using FAISS + OpenAI Embeddings
 - **Source Citations:** Every answer cites the specific document it came from
 - **Multi-turn Chat:** Follow-up questions with conversation memory
+- **Integrated Tools:** Generate plans and reports directly from the chat interface
 
-### 2. ☁️ Google Drive Integration
-**Connect your Google Drive to index documents directly from the cloud.**
-
-- **OAuth 2.0 Authentication:** Secure access to your Drive files
-- **Folder Browsing:** Navigate and select files from any folder
-- **Supported Formats:** PDF, DOCX, TXT, Excel (XLSX/XLS)
-- **Google Docs Export:** Native Google Docs/Sheets are automatically exported
-
-### 3. 📋 Intelligent Project Planning
+### 2. 📋 Intelligent Project Planning
 Upload unstructured project documents to generate comprehensive, structured Project Plans.
 
 - **Supported Formats:** PDF, DOCX, TXT, Excel
@@ -45,7 +61,7 @@ Upload unstructured project documents to generate comprehensive, structured Proj
 - **Downloads:** PDF, Word (DOCX), Markdown, Plain Text
 - **Email:** Send directly to stakeholders
 
-### 4. 📊 Automated Status Reporting
+### 3. 📊 Automated Status Reporting
 Connect your Trello board to instantly generate weekly status reports.
 
 - **Trello Integration:** Works with Board IDs or URLs
@@ -53,15 +69,15 @@ Connect your Trello board to instantly generate weekly status reports.
 - **Risk Detection:** Automatically identifies blockers and risks
 - **Export:** PDF, DOCX, Markdown with one-click email
 
-### 5. 📋 Trello Board Actions
+### 4. 📋 Trello Board Actions
 **Perform CRUD operations on your Trello boards directly from Mira.**
 
-- Create new cards with descriptions, due dates, and labels
+- Create new cards with descriptions, due dates, labels, and members
 - Update existing cards (move between lists, edit details)
 - Add comments and checklist items
 - Archive/restore cards and lists
 
-### 6. 📤 One-Click Sharing
+### 5. 📤 One-Click Sharing
 - **Direct Email:** Send formatted reports to stakeholders via Gmail
 - **Multi-Format Export:** PDF, DOCX, Markdown, Plain Text
 
@@ -73,7 +89,6 @@ Connect your Trello board to instantly generate weekly status reports.
 - Python 3.9+
 - OpenAI API Key
 - (Optional) Trello API Key & Token
-- (Optional) Google Cloud OAuth credentials
 
 ### Installation
 
@@ -97,7 +112,6 @@ Enter your credentials in the sidebar:
 |------------|--------------|------------|
 | **OpenAI API Key** | All AI features | [OpenAI Platform](https://platform.openai.com/api-keys) |
 | **Trello Key & Token** | Status Reports, Board Actions | [Trello Power-Ups Admin](https://trello.com/power-ups/admin) |
-| **Google OAuth** | Google Drive integration | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
 | **Gmail App Password** | Email sending | Google Account > Security > App Passwords |
 
 ---
@@ -107,7 +121,7 @@ Enter your credentials in the sidebar:
 ### AI Assistant (RAG Chat)
 
 1. Go to the **AI Assistant** tab
-2. Upload documents locally OR connect Google Drive
+2. Upload your project documents (PDF, DOCX, TXT, Excel)
 3. Wait for auto-indexing to complete
 4. Start chatting! Ask questions like:
    - "What are the key milestones?"
@@ -144,7 +158,6 @@ Enter your credentials in the sidebar:
 flowchart TB
     subgraph Input["📥 Input Sources"]
         Local["💻 Local Upload"]
-        GDrive["☁️ Google Drive"]
         Trello["📋 Trello API"]
     end
 
@@ -172,7 +185,6 @@ flowchart TB
     end
 
     Local --> DocProc
-    GDrive --> DocProc
     DocProc --> Splitter
     Splitter --> Embeddings
     Embeddings --> FAISS
@@ -203,7 +215,6 @@ Mira-AI-Agent/
 │   ├── tools.py              # LangChain Tools (RAG, Trello, etc.)
 │   ├── prompts.py            # System prompts
 │   ├── trello_client.py      # Trello API client
-│   ├── google_drive_client.py# Google Drive OAuth & API
 │   ├── output_generator.py   # PDF/DOCX generation
 │   └── email_service.py      # SMTP email sending
 └── outputs/                  # Generated files (gitignored)
@@ -221,7 +232,6 @@ Mira-AI-Agent/
 | **Vector Store** | FAISS (in-memory) |
 | **Embeddings** | OpenAI text-embedding-ada-002 |
 | **Document Parsing** | pdfplumber, python-docx, pandas |
-| **Cloud Storage** | Google Drive API v3 |
 | **Task Management** | Trello REST API |
 | **Deployment** | Streamlit Community Cloud |
 
