@@ -4,10 +4,12 @@ from typing import Optional, Callable, List, Dict, Any
 
 from openai import OpenAI, OpenAIError
 from .prompts import STATUS_REPORT_PROMPT, PROJECT_PLAN_PROMPT
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+
+# LangChain imports - using langchain_core for stability
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.memory import ConversationBufferMemory
-            
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.messages import HumanMessage, AIMessage
+
 from .tools import create_agent_tools
 
 class LLMHandler:
@@ -176,7 +178,9 @@ class AgenticLLMHandler:
             return
         
         try:
-            
+            # Deferred imports for better compatibility
+            from langchain.agents import AgentExecutor, create_tool_calling_agent
+            from langchain.memory import ConversationBufferMemory
             
             # Create tools with current configuration
             self.tools = create_agent_tools(
