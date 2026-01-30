@@ -49,3 +49,35 @@ Format: Use markdown with clear headers and bullet points.
 Tone: Professional, clear, actionable.
 Length: Comprehensive but concise.
 """
+
+TRELLO_BOARD_PROMPT = """
+You are a TPM assistant. Extract a Trello board specification from the project documents.
+
+Board name preference (optional): {board_name}
+Preferred list names (optional): {list_names}
+
+Requirements:
+- Return JSON only (no markdown, no commentary).
+- If a board name is provided, use it; otherwise infer a concise project name.
+- If list names are provided, use them exactly; otherwise use ["To Do", "In Progress", "Done"].
+- Create cards only for tasks explicitly mentioned in the documents.
+- Each card must include: title, description, list, due_date.
+- due_date must be ISO "YYYY-MM-DD" or null if not specified.
+
+Documents:
+{documents_text}
+
+Return JSON with this schema:
+{{
+  "board_name": "string",
+  "lists": ["string", "string"],
+  "cards": [
+    {{
+      "title": "string",
+      "description": "string",
+      "list": "string",
+      "due_date": "YYYY-MM-DD or null"
+    }}
+  ]
+}}
+"""

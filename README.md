@@ -9,6 +9,7 @@ Mira is an intelligent Technical Program Management (TPM) assistant powered by *
 ## 🆕 Version 2.2.0 Updates
 
 ### 🤖 AI Assistant Tab (Enhanced)
+
 The AI Assistant has been streamlined with a cleaner, more focused interface:
 
 - **Simplified Document Upload:** Direct local file upload with automatic indexing
@@ -19,6 +20,7 @@ The AI Assistant has been streamlined with a cleaner, more focused interface:
 - **Source Citations:** Every answer references the specific document it came from
 
 ### 📋 Board Actions Tab (New)
+
 Full CRUD operations for Trello board management:
 
 - **Create Cards:** Add new cards with titles, descriptions, due dates, labels, and members
@@ -45,6 +47,7 @@ Full CRUD operations for Trello board management:
 ## ✨ Key Features
 
 ### 1. 🤖 AI Assistant (LangChain Agentic RAG)
+
 **Chat with your project documents using natural language.** Upload files and Mira will intelligently answer questions with source citations.
 
 - **Document Q&A:** "What are the key milestones?" / "Who is responsible for Phase 2?"
@@ -54,6 +57,7 @@ Full CRUD operations for Trello board management:
 - **Integrated Tools:** Generate plans and reports directly from the chat interface
 
 ### 2. 📋 Intelligent Project Planning
+
 Upload unstructured project documents to generate comprehensive, structured Project Plans.
 
 - **Supported Formats:** PDF, DOCX, TXT, Excel
@@ -62,6 +66,7 @@ Upload unstructured project documents to generate comprehensive, structured Proj
 - **Email:** Send directly to stakeholders
 
 ### 3. 📊 Automated Status Reporting
+
 Connect your Trello board to instantly generate weekly status reports.
 
 - **Trello Integration:** Works with Board IDs or URLs
@@ -70,6 +75,7 @@ Connect your Trello board to instantly generate weekly status reports.
 - **Export:** PDF, DOCX, Markdown with one-click email
 
 ### 4. 📋 Trello Board Actions
+
 **Perform CRUD operations on your Trello boards directly from Mira.**
 
 - Create new cards with descriptions, due dates, labels, and members
@@ -78,6 +84,7 @@ Connect your Trello board to instantly generate weekly status reports.
 - Archive/restore cards and lists
 
 ### 5. 📤 One-Click Sharing
+
 - **Direct Email:** Send formatted reports to stakeholders via Gmail
 - **Multi-Format Export:** PDF, DOCX, Markdown, Plain Text
 
@@ -86,6 +93,7 @@ Connect your Trello board to instantly generate weekly status reports.
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.9+
 - OpenAI API Key
 - (Optional) Trello API Key & Token
@@ -106,13 +114,34 @@ streamlit run app.py
 
 ### Configuration
 
+#### Environment Variables (Optional)
+
+Create a `.env` file in the project root for database and email configuration:
+
+```bash
+# Database Configuration (Optional - enables login and credential storage)
+# For SQLite (local development - recommended):
+DATABASE_URL=sqlite:///./mira.db
+
+# For PostgreSQL (production):
+# DATABASE_URL=postgresql://user:password@localhost:5432/mira_db
+
+# Magic Link Email Configuration (Optional - for login via email)
+MAGIC_LINK_SENDER=your_email@gmail.com
+MAGIC_LINK_PASSWORD=your_app_password_here
+```
+
+**Note:** The database is optional. Without `DATABASE_URL`, the app will work but login features will be disabled. For local development, SQLite is the simplest option.
+
+#### Sidebar Credentials
+
 Enter your credentials in the sidebar:
 
-| Credential | Required For | How to Get |
-|------------|--------------|------------|
-| **OpenAI API Key** | All AI features | [OpenAI Platform](https://platform.openai.com/api-keys) |
+| Credential             | Required For                  | How to Get                                                   |
+| ---------------------- | ----------------------------- | ------------------------------------------------------------ |
+| **OpenAI API Key**     | All AI features               | [OpenAI Platform](https://platform.openai.com/api-keys)      |
 | **Trello Key & Token** | Status Reports, Board Actions | [Trello Power-Ups Admin](https://trello.com/power-ups/admin) |
-| **Gmail App Password** | Email sending | Google Account > Security > App Passwords |
+| **Gmail App Password** | Email sending                 | Google Account > Security > App Passwords                    |
 
 ---
 
@@ -224,16 +253,16 @@ Mira-AI-Agent/
 
 ## 🔧 Tech Details
 
-| Component | Technology |
-|-----------|------------|
-| **Frontend** | Streamlit |
-| **LLM** | OpenAI GPT-4o-mini / GPT-4o / GPT-3.5 |
-| **Agent Framework** | LangChain (AgentExecutor) |
-| **Vector Store** | FAISS (in-memory) |
-| **Embeddings** | OpenAI text-embedding-ada-002 |
-| **Document Parsing** | pdfplumber, python-docx, pandas |
-| **Task Management** | Trello REST API |
-| **Deployment** | Streamlit Community Cloud |
+| Component            | Technology                            |
+| -------------------- | ------------------------------------- |
+| **Frontend**         | Streamlit                             |
+| **LLM**              | OpenAI GPT-4o-mini / GPT-4o / GPT-3.5 |
+| **Agent Framework**  | LangChain (AgentExecutor)             |
+| **Vector Store**     | FAISS (in-memory)                     |
+| **Embeddings**       | OpenAI text-embedding-ada-002         |
+| **Document Parsing** | pdfplumber, python-docx, pandas       |
+| **Task Management**  | Trello REST API                       |
+| **Deployment**       | Streamlit Community Cloud             |
 
 ---
 

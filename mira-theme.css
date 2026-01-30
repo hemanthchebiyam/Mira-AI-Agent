@@ -1,0 +1,826 @@
+/* ==========================================================================
+   MIRA AGENT - STREAMLIT PREMIUM THEME
+   Matches the React landing page: warm gradients, glassmorphism, modern typography
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   CSS VARIABLES - Color System (matches React index.css)
+   -------------------------------------------------------------------------- */
+:root {
+    /* Warm dark backgrounds */
+    --mira-bg-dark: hsl(20, 14%, 8%);
+    --mira-bg-card: hsl(20, 12%, 12%);
+    --mira-bg-elevated: hsl(20, 12%, 15%);
+    --mira-bg-input: hsl(20, 10%, 18%);
+    
+    /* Text colors */
+    --mira-text-primary: hsl(35, 25%, 95%);
+    --mira-text-secondary: hsl(35, 20%, 85%);
+    --mira-text-muted: hsl(35, 15%, 55%);
+    
+    /* Primary - Warm coral/salmon */
+    --mira-primary: hsl(12, 80%, 62%);
+    --mira-primary-hover: hsl(12, 80%, 55%);
+    --mira-primary-glow: hsl(12, 80%, 62%, 0.3);
+    
+    /* Accent - Golden amber */
+    --mira-accent: hsl(38, 92%, 55%);
+    --mira-accent-glow: hsl(38, 92%, 55%, 0.3);
+    
+    /* Borders */
+    --mira-border: hsl(20, 10%, 22%);
+    --mira-border-light: hsl(20, 10%, 28%);
+    
+    /* Gradients */
+    --mira-gradient-warm: linear-gradient(135deg, hsl(12, 80%, 62%) 0%, hsl(38, 92%, 55%) 100%);
+    --mira-gradient-bg: linear-gradient(160deg, hsl(20, 14%, 8%) 0%, hsl(15, 18%, 12%) 50%, hsl(25, 12%, 10%) 100%);
+    --mira-gradient-glass: linear-gradient(135deg, hsl(20, 12%, 14%, 0.8) 0%, hsl(20, 12%, 10%, 0.9) 100%);
+    
+    /* Shadows */
+    --mira-shadow-sm: 0 2px 8px -2px hsl(0, 0%, 0%, 0.3);
+    --mira-shadow-md: 0 8px 24px -8px hsl(0, 0%, 0%, 0.4);
+    --mira-shadow-lg: 0 16px 48px -12px hsl(0, 0%, 0%, 0.5);
+    --mira-shadow-warm: 0 8px 32px -8px hsl(12, 80%, 35%, 0.25);
+    
+    /* Status colors */
+    --mira-success: hsl(142, 76%, 45%);
+    --mira-warning: hsl(38, 92%, 55%);
+    --mira-error: hsl(0, 72%, 51%);
+    --mira-info: hsl(200, 80%, 55%);
+    
+    /* Spacing */
+    --mira-radius-sm: 0.5rem;
+    --mira-radius-md: 0.75rem;
+    --mira-radius-lg: 1rem;
+    --mira-radius-xl: 1.5rem;
+    
+    /* Typography */
+    --mira-font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   GLOBAL STYLES & BACKGROUND
+   -------------------------------------------------------------------------- */
+.stApp {
+    background: var(--mira-gradient-bg) !important;
+    font-family: var(--mira-font-sans) !important;
+    color: var(--mira-text-primary) !important;
+}
+
+/* Material Icons support */
+.material-icons,
+.material-symbols-outlined {
+    font-family: 'Material Icons', 'Material Symbols Outlined' !important;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure icon fonts are loaded before text renders */
+@font-face {
+    font-family: 'Material Icons';
+    font-style: normal;
+    font-weight: 400;
+    src: url(https://fonts.gstatic.com/s/materialicons/v139/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2) format('woff2');
+}
+
+/* Hide icon names that appear as text - CSS backup */
+[class*="keyboard_double"],
+[class*="board_double"],
+[id*="keyboard_double"],
+[id*="board_double"],
+[class*="key_double"],
+[id*="key_double"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
+
+/* Main content area */
+.main .block-container {
+    padding: 2rem 3rem !important;
+    max-width: 1400px !important;
+}
+
+/* Hide Streamlit branding (keep header for sidebar toggle) */
+#MainMenu, footer {
+    visibility: hidden !important;
+    height: 0 !important;
+}
+header[data-testid="stHeader"] {
+    visibility: visible !important;
+    height: auto !important;
+}
+
+/* Sidebar toggle button */
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebarCollapsedControl"] button {
+    background: var(--mira-bg-card) !important;
+    color: var(--mira-text-primary) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-md) !important;
+    box-shadow: var(--mira-shadow-sm) !important;
+}
+
+/* --------------------------------------------------------------------------
+   HERO HEADER AREA
+   Add this class to a container for hero styling
+   -------------------------------------------------------------------------- */
+.hero-header {
+    background: var(--mira-gradient-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--mira-border);
+    border-radius: var(--mira-radius-xl);
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--mira-shadow-lg);
+}
+
+.hero-title {
+    background: var(--mira-gradient-warm);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.hero-subtitle {
+    color: var(--mira-text-secondary);
+    font-size: 1.1rem;
+    font-weight: 400;
+}
+
+/* --------------------------------------------------------------------------
+   SIDEBAR STYLING
+   -------------------------------------------------------------------------- */
+[data-testid="stSidebar"] {
+    background: var(--mira-bg-card) !important;
+    border-right: 1px solid var(--mira-border) !important;
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    background: transparent !important;
+    padding: 1.5rem 1rem !important;
+}
+
+/* Sidebar header/logo area */
+[data-testid="stSidebar"] .block-container {
+    padding-top: 1rem !important;
+}
+
+/* Sidebar text */
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label {
+    color: var(--mira-text-secondary) !important;
+    font-family: var(--mira-font-sans) !important;
+}
+
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: var(--mira-text-primary) !important;
+    font-family: var(--mira-font-sans) !important;
+    font-weight: 600 !important;
+}
+
+/* --------------------------------------------------------------------------
+   TABS STYLING
+   -------------------------------------------------------------------------- */
+.stTabs {
+    background: transparent !important;
+}
+
+/* Tab list container */
+[data-baseweb="tab-list"] {
+    background: var(--mira-bg-input) !important;
+    border-radius: var(--mira-radius-lg) !important;
+    padding: 0.375rem !important;
+    gap: 0.25rem !important;
+    border: 1px solid var(--mira-border) !important;
+}
+
+/* Individual tabs */
+[data-baseweb="tab"] {
+    background: transparent !important;
+    color: var(--mira-text-muted) !important;
+    border-radius: var(--mira-radius-md) !important;
+    padding: 0.75rem 1.25rem !important;
+    font-family: var(--mira-font-sans) !important;
+    font-weight: 500 !important;
+    font-size: 0.9rem !important;
+    border: none !important;
+    transition: all 0.2s ease !important;
+}
+
+[data-baseweb="tab"]:hover {
+    color: var(--mira-text-secondary) !important;
+    background: hsl(20, 10%, 22%, 0.5) !important;
+}
+
+/* Active tab */
+[aria-selected="true"][data-baseweb="tab"] {
+    background: var(--mira-bg-elevated) !important;
+    color: var(--mira-text-primary) !important;
+    box-shadow: var(--mira-shadow-sm) !important;
+}
+
+/* Tab highlight/underline - remove default */
+[data-baseweb="tab-highlight"] {
+    display: none !important;
+}
+
+/* Tab panel content */
+[data-baseweb="tab-panel"] {
+    padding: 1.5rem 0 !important;
+}
+
+/* --------------------------------------------------------------------------
+   CARD SECTIONS (Use st.container with custom class)
+   -------------------------------------------------------------------------- */
+.glass-card {
+    background: var(--mira-gradient-glass) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-lg) !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1rem !important;
+    box-shadow: var(--mira-shadow-md) !important;
+}
+
+.card-solid {
+    background: var(--mira-bg-card) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-lg) !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1rem !important;
+    box-shadow: var(--mira-shadow-sm) !important;
+}
+
+/* --------------------------------------------------------------------------
+   BUTTONS
+   -------------------------------------------------------------------------- */
+/* Primary buttons */
+.stButton > button,
+[data-testid="baseButton-primary"] {
+    background: var(--mira-gradient-warm) !important;
+    color: var(--mira-bg-dark) !important;
+    border: none !important;
+    border-radius: var(--mira-radius-md) !important;
+    padding: 0.75rem 1.5rem !important;
+    font-family: var(--mira-font-sans) !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    box-shadow: var(--mira-shadow-warm) !important;
+    transition: all 0.2s ease !important;
+}
+
+.stButton > button:hover,
+[data-testid="baseButton-primary"]:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 40px -8px hsl(12, 80%, 35%, 0.4) !important;
+}
+
+.stButton > button:active {
+    transform: translateY(0) !important;
+}
+
+/* Secondary buttons */
+[data-testid="baseButton-secondary"] {
+    background: var(--mira-bg-input) !important;
+    color: var(--mira-text-primary) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-md) !important;
+    box-shadow: none !important;
+}
+
+[data-testid="baseButton-secondary"]:hover {
+    background: var(--mira-bg-elevated) !important;
+    border-color: var(--mira-border-light) !important;
+}
+
+/* --------------------------------------------------------------------------
+   TEXT INPUTS & TEXTAREAS
+   -------------------------------------------------------------------------- */
+.stTextInput > div > div,
+.stTextArea > div > div,
+[data-baseweb="input"],
+[data-baseweb="textarea"] {
+    background: var(--mira-bg-input) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-md) !important;
+    color: var(--mira-text-primary) !important;
+    font-family: var(--mira-font-sans) !important;
+    transition: all 0.2s ease !important;
+}
+
+.stTextInput > div > div:focus-within,
+.stTextArea > div > div:focus-within {
+    border-color: var(--mira-primary) !important;
+    box-shadow: 0 0 0 3px var(--mira-primary-glow) !important;
+}
+
+.stTextInput input,
+.stTextArea textarea {
+    color: var(--mira-text-primary) !important;
+    font-family: var(--mira-font-sans) !important;
+}
+
+.stTextInput input::placeholder,
+.stTextArea textarea::placeholder {
+    color: var(--mira-text-muted) !important;
+}
+
+/* Input labels */
+.stTextInput label,
+.stTextArea label,
+.stSelectbox label,
+.stMultiSelect label {
+    color: var(--mira-text-secondary) !important;
+    font-family: var(--mira-font-sans) !important;
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   SELECT BOXES & DROPDOWNS
+   -------------------------------------------------------------------------- */
+[data-baseweb="select"] > div {
+    background: var(--mira-bg-input) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-md) !important;
+}
+
+[data-baseweb="select"] > div:focus-within {
+    border-color: var(--mira-primary) !important;
+    box-shadow: 0 0 0 3px var(--mira-primary-glow) !important;
+}
+
+/* Dropdown menu */
+[data-baseweb="menu"],
+[data-baseweb="popover"] > div {
+    background: var(--mira-bg-elevated) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-md) !important;
+    box-shadow: var(--mira-shadow-lg) !important;
+}
+
+[data-baseweb="menu"] li {
+    color: var(--mira-text-secondary) !important;
+    font-family: var(--mira-font-sans) !important;
+}
+
+[data-baseweb="menu"] li:hover {
+    background: var(--mira-bg-input) !important;
+    color: var(--mira-text-primary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   FILE UPLOADER
+   -------------------------------------------------------------------------- */
+[data-testid="stFileUploader"] {
+    background: var(--mira-bg-input) !important;
+    border: 2px dashed var(--mira-border) !important;
+    border-radius: var(--mira-radius-lg) !important;
+    padding: 2rem !important;
+    transition: all 0.2s ease !important;
+}
+
+[data-testid="stFileUploader"]:hover {
+    border-color: var(--mira-primary) !important;
+    background: hsl(12, 80%, 62%, 0.05) !important;
+}
+
+[data-testid="stFileUploader"] section {
+    background: transparent !important;
+}
+
+[data-testid="stFileUploader"] button {
+    background: var(--mira-gradient-warm) !important;
+    color: var(--mira-bg-dark) !important;
+    border: none !important;
+    border-radius: var(--mira-radius-md) !important;
+    font-weight: 600 !important;
+}
+
+/* --------------------------------------------------------------------------
+   CHAT MESSAGES (st.chat_message)
+   -------------------------------------------------------------------------- */
+[data-testid="stChatMessage"] {
+    background: var(--mira-bg-card) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-lg) !important;
+    padding: 1rem 1.25rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+/* User messages */
+[data-testid="stChatMessage"][data-testid*="user"] {
+    background: var(--mira-bg-input) !important;
+    border-color: var(--mira-border-light) !important;
+}
+
+/* Assistant messages */
+[data-testid="stChatMessage"][data-testid*="assistant"] {
+    background: linear-gradient(135deg, hsl(12, 80%, 62%, 0.1) 0%, hsl(38, 92%, 55%, 0.1) 100%) !important;
+    border-color: hsl(12, 80%, 62%, 0.3) !important;
+}
+
+/* Chat avatars */
+[data-testid="stChatMessage"] [data-testid="stAvatar"] {
+    background: var(--mira-gradient-warm) !important;
+    border-radius: var(--mira-radius-md) !important;
+}
+
+/* Chat input */
+[data-testid="stChatInput"] {
+    background: var(--mira-bg-card) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-lg) !important;
+}
+
+[data-testid="stChatInput"] textarea {
+    background: var(--mira-bg-input) !important;
+    color: var(--mira-text-primary) !important;
+    font-family: var(--mira-font-sans) !important;
+}
+
+/* --------------------------------------------------------------------------
+   EXPANDERS
+   -------------------------------------------------------------------------- */
+[data-testid="stExpander"] {
+    background: var(--mira-bg-card) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-lg) !important;
+    overflow: hidden !important;
+    margin-bottom: 0.75rem !important;
+}
+
+[data-testid="stExpander"] summary {
+    background: transparent !important;
+    color: var(--mira-text-primary) !important;
+    font-family: var(--mira-font-sans) !important;
+    font-weight: 600 !important;
+    padding: 1rem 1.25rem !important;
+}
+
+[data-testid="stExpander"] summary:hover {
+    background: var(--mira-bg-input) !important;
+}
+
+[data-testid="stExpander"] > div {
+    padding: 0 1.25rem 1rem !important;
+}
+
+/* Expander icon */
+[data-testid="stExpander"] summary svg {
+    color: var(--mira-primary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   STATUS INDICATORS & ALERTS
+   -------------------------------------------------------------------------- */
+/* Success */
+[data-testid="stAlert"][data-baseweb*="success"],
+.stSuccess {
+    background: hsl(142, 76%, 45%, 0.15) !important;
+    border: 1px solid hsl(142, 76%, 45%, 0.4) !important;
+    border-radius: var(--mira-radius-md) !important;
+    color: hsl(142, 76%, 65%) !important;
+}
+
+/* Warning */
+[data-testid="stAlert"][data-baseweb*="warning"],
+.stWarning {
+    background: hsl(38, 92%, 55%, 0.15) !important;
+    border: 1px solid hsl(38, 92%, 55%, 0.4) !important;
+    border-radius: var(--mira-radius-md) !important;
+    color: hsl(38, 92%, 65%) !important;
+}
+
+/* Error */
+[data-testid="stAlert"][data-baseweb*="error"],
+.stError {
+    background: hsl(0, 72%, 51%, 0.15) !important;
+    border: 1px solid hsl(0, 72%, 51%, 0.4) !important;
+    border-radius: var(--mira-radius-md) !important;
+    color: hsl(0, 72%, 65%) !important;
+}
+
+/* Info */
+[data-testid="stAlert"][data-baseweb*="info"],
+.stInfo {
+    background: hsl(200, 80%, 55%, 0.15) !important;
+    border: 1px solid hsl(200, 80%, 55%, 0.4) !important;
+    border-radius: var(--mira-radius-md) !important;
+    color: hsl(200, 80%, 70%) !important;
+}
+
+/* --------------------------------------------------------------------------
+   METRICS & STATUS PANELS
+   -------------------------------------------------------------------------- */
+[data-testid="stMetric"] {
+    background: var(--mira-bg-card) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-lg) !important;
+    padding: 1.25rem !important;
+}
+
+[data-testid="stMetric"] label {
+    color: var(--mira-text-muted) !important;
+    font-family: var(--mira-font-sans) !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+}
+
+[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    color: var(--mira-text-primary) !important;
+    font-family: var(--mira-font-sans) !important;
+    font-weight: 700 !important;
+    font-size: 1.75rem !important;
+}
+
+[data-testid="stMetric"] [data-testid="stMetricDelta"] {
+    font-family: var(--mira-font-sans) !important;
+}
+
+/* Positive delta */
+[data-testid="stMetricDelta"] svg[data-testid="stMetricDeltaIcon-Up"] {
+    color: var(--mira-success) !important;
+}
+
+/* Negative delta */
+[data-testid="stMetricDelta"] svg[data-testid="stMetricDeltaIcon-Down"] {
+    color: var(--mira-error) !important;
+}
+
+/* --------------------------------------------------------------------------
+   TABLES & DATAFRAMES
+   -------------------------------------------------------------------------- */
+[data-testid="stDataFrame"],
+[data-testid="stTable"] {
+    background: var(--mira-bg-card) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-lg) !important;
+    overflow: hidden !important;
+}
+
+[data-testid="stDataFrame"] th,
+[data-testid="stTable"] th {
+    background: var(--mira-bg-input) !important;
+    color: var(--mira-text-secondary) !important;
+    font-family: var(--mira-font-sans) !important;
+    font-weight: 600 !important;
+    border-bottom: 1px solid var(--mira-border) !important;
+}
+
+[data-testid="stDataFrame"] td,
+[data-testid="stTable"] td {
+    color: var(--mira-text-primary) !important;
+    font-family: var(--mira-font-sans) !important;
+    border-bottom: 1px solid var(--mira-border) !important;
+}
+
+[data-testid="stDataFrame"] tr:hover td,
+[data-testid="stTable"] tr:hover td {
+    background: var(--mira-bg-input) !important;
+}
+
+/* --------------------------------------------------------------------------
+   FORMS
+   -------------------------------------------------------------------------- */
+[data-testid="stForm"] {
+    background: var(--mira-bg-card) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-lg) !important;
+    padding: 1.5rem !important;
+}
+
+/* Form submit button */
+[data-testid="stFormSubmitButton"] button {
+    background: var(--mira-gradient-warm) !important;
+    color: var(--mira-bg-dark) !important;
+    border: none !important;
+    font-weight: 600 !important;
+}
+
+/* --------------------------------------------------------------------------
+   CHECKBOXES & RADIO BUTTONS
+   -------------------------------------------------------------------------- */
+[data-testid="stCheckbox"] label span,
+[data-testid="stRadio"] label span {
+    color: var(--mira-text-secondary) !important;
+    font-family: var(--mira-font-sans) !important;
+}
+
+[data-baseweb="checkbox"] div {
+    background: var(--mira-bg-input) !important;
+    border-color: var(--mira-border) !important;
+    border-radius: var(--mira-radius-sm) !important;
+}
+
+[data-baseweb="checkbox"][data-checked="true"] div {
+    background: var(--mira-primary) !important;
+    border-color: var(--mira-primary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   SLIDERS
+   -------------------------------------------------------------------------- */
+[data-baseweb="slider"] [data-testid="stThumbValue"] {
+    color: var(--mira-text-primary) !important;
+    font-family: var(--mira-font-sans) !important;
+}
+
+[data-baseweb="slider"] div[role="slider"] {
+    background: var(--mira-primary) !important;
+}
+
+[data-baseweb="slider"] > div > div {
+    background: var(--mira-bg-input) !important;
+}
+
+/* --------------------------------------------------------------------------
+   PROGRESS BARS & SPINNERS
+   -------------------------------------------------------------------------- */
+[data-testid="stProgress"] > div {
+    background: var(--mira-bg-input) !important;
+    border-radius: var(--mira-radius-md) !important;
+    overflow: hidden !important;
+}
+
+[data-testid="stProgress"] > div > div {
+    background: var(--mira-gradient-warm) !important;
+}
+
+.stSpinner > div {
+    border-top-color: var(--mira-primary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   DIVIDERS & SEPARATORS
+   -------------------------------------------------------------------------- */
+hr, [data-testid="stHorizontalBlock"] hr {
+    border-color: var(--mira-border) !important;
+    opacity: 0.5 !important;
+}
+
+/* --------------------------------------------------------------------------
+   MARKDOWN & TYPOGRAPHY
+   -------------------------------------------------------------------------- */
+.stMarkdown {
+    color: var(--mira-text-primary) !important;
+    font-family: var(--mira-font-sans) !important;
+}
+
+.stMarkdown h1 {
+    color: var(--mira-text-primary) !important;
+    font-weight: 700 !important;
+    font-size: 2rem !important;
+}
+
+.stMarkdown h2 {
+    color: var(--mira-text-primary) !important;
+    font-weight: 600 !important;
+    font-size: 1.5rem !important;
+}
+
+.stMarkdown h3 {
+    color: var(--mira-text-secondary) !important;
+    font-weight: 600 !important;
+    font-size: 1.25rem !important;
+}
+
+.stMarkdown p {
+    color: var(--mira-text-secondary) !important;
+    line-height: 1.6 !important;
+}
+
+.stMarkdown a {
+    color: var(--mira-primary) !important;
+    text-decoration: none !important;
+}
+
+.stMarkdown a:hover {
+    text-decoration: underline !important;
+}
+
+.stMarkdown code {
+    background: var(--mira-bg-input) !important;
+    color: var(--mira-accent) !important;
+    padding: 0.2rem 0.4rem !important;
+    border-radius: var(--mira-radius-sm) !important;
+    font-size: 0.875em !important;
+}
+
+.stMarkdown pre {
+    background: var(--mira-bg-input) !important;
+    border: 1px solid var(--mira-border) !important;
+    border-radius: var(--mira-radius-md) !important;
+    padding: 1rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   COLUMNS & LAYOUT
+   -------------------------------------------------------------------------- */
+[data-testid="column"] {
+    padding: 0.5rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE ADJUSTMENTS
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .main .block-container {
+        padding: 1rem !important;
+    }
+    
+    [data-baseweb="tab-list"] {
+        flex-wrap: wrap !important;
+    }
+    
+    [data-baseweb="tab"] {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .hero-header {
+        padding: 1.5rem !important;
+    }
+    
+    .hero-title {
+        font-size: 1.75rem !important;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   ANIMATIONS
+   -------------------------------------------------------------------------- */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Apply subtle animation to main content */
+.main .block-container > div {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+/* --------------------------------------------------------------------------
+   CUSTOM UTILITY CLASSES
+   Use these with st.markdown to apply styles
+   -------------------------------------------------------------------------- */
+.gradient-text {
+    background: var(--mira-gradient-warm);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.badge-primary {
+    display: inline-block;
+    background: var(--mira-primary-glow);
+    color: var(--mira-primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-accent {
+    display: inline-block;
+    background: var(--mira-accent-glow);
+    color: var(--mira-accent);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}

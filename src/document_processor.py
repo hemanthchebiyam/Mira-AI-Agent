@@ -28,6 +28,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores import PGVector
 
 
 class DocumentProcessor:
@@ -397,6 +398,28 @@ class DocumentProcessor:
             embedding=embeddings
         )
         
+        return vector_store
+
+    def create_vector_store_pgvector(self, uploaded_files, api_key: str, collection_name: str = "mira_docs"):
+        """
+        Create a persistent vector store using PGVector (Postgres).
+        Requires pgvector extension enabled in the database.
+        """
+        documents = self.process_files_to_documents(uploaded_files)
+        if not documents:
+            return None
+
+        embeddings = OpenAIEmbeddings(api_key=api_key)
+        connection_string = os.getenv("DATABASE_URL")
+        if not connection_string:
+            raise RuntimeError("DATABASE_URL is not set for PGVector.")
+
+        vector_store = PGVector.from_documents(
+            documents=documents,
+            embedding=embeddings,
+            collection_name=collection_name,
+            connection_string=connection_string,
+        )
         return vector_store
     
     def get_combined_text_from_documents(self, documents: List[Document]) -> str:

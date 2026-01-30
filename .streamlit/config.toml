@@ -1,0 +1,26 @@
+# .streamlit/config.toml
+# Place this file in your Streamlit project's .streamlit folder
+
+[theme]
+# Primary accent color (Mira coral)
+primaryColor = "#E86D4C"
+
+# Background color (warm dark)
+backgroundColor = "#1A1512"
+
+# Secondary background (cards)
+secondaryBackgroundColor = "#211C18"
+
+# Text color (warm white)
+textColor = "#F7F3EF"
+
+# Font - Note: Custom fonts require CSS injection
+font = "sans serif"
+
+[server]
+# Enable wide mode by default
+maxUploadSize = 50
+
+[browser]
+# Gather usage stats
+gatherUsageStats = false

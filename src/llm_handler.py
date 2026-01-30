@@ -1,9 +1,11 @@
 import os
+import json
+import re
 from datetime import datetime
 from typing import Optional, Callable, List, Dict, Any
 
 from openai import OpenAI, OpenAIError
-from .prompts import STATUS_REPORT_PROMPT, PROJECT_PLAN_PROMPT
+from .prompts import STATUS_REPORT_PROMPT, PROJECT_PLAN_PROMPT, TRELLO_BOARD_PROMPT
 
 # LangChain imports - using langchain_core for stability
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -56,6 +58,19 @@ class LLMHandler:
         prompt = PROJECT_PLAN_PROMPT.format(documents_text=documents_text)
         return self._call_llm(prompt, "You are an expert Technical Program Manager.")
 
+    def generate_trello_board_spec(self, documents_text, board_name=None, list_names=None):
+        """Generate a Trello board specification (JSON) from project documents."""
+        if not self._ensure_client():
+            return {"error": "OpenAI API Key is missing or invalid."}
+
+        prompt = TRELLO_BOARD_PROMPT.format(
+            documents_text=documents_text,
+            board_name=board_name or "",
+            list_names=list_names or ""
+        )
+        response = self._call_llm(prompt, "You are a meticulous project planner.")
+        return self._parse_json_response(response)
+
     def _call_llm(self, user_prompt, system_prompt):
         if not self.client:
              return "Error: OpenAI Client not initialized. Check API Key."
@@ -72,6 +87,25 @@ class LLMHandler:
             return response.choices[0].message.content
         except Exception as e:
             return f"Error generating response: {str(e)}"
+
+    def _parse_json_response(self, response_text):
+        """Parse JSON from a model response, with a minimal fallback extractor."""
+        if not response_text or response_text.startswith("Error:"):
+            return {"error": response_text or "Empty response from model."}
+
+        try:
+            return json.loads(response_text)
+        except Exception:
+            pass
+
+        try:
+            match = re.search(r"\{.*\}", response_text, flags=re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
+        except Exception:
+            pass
+
+        return {"error": "Failed to parse JSON from model response."}
 
 
 # ============================================================================

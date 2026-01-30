@@ -7,3 +7,7 @@ outputs/
 chroma_db/
 __pycache__/
 .chroma/
+*.db
+*.sqlite
+*.sqlite3
+uploads

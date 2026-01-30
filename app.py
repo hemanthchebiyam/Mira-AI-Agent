@@ -6,15 +6,45 @@ import streamlit as st
 import time
 import re
 from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 from src.trello_client import TrelloClient
 from src.llm_handler import LLMHandler, AgenticLLMHandler
 from src.output_generator import OutputGenerator
 from src.email_service import EmailService
 from src.document_processor import DocumentProcessor
+from src.db import init_db, get_or_create_user
+from src.auth import generate_login_token, verify_login_token, send_magic_link
+from src.supabase_auth import verify_supabase_token
+from src.secret_store import get_secret, set_secret, get_company_secret_value, set_company_secret
+from src.storage import save_uploaded_files
 
-# Load environment variables
-load_dotenv()
+# Load environment variables (use explicit path so .env is found regardless of cwd)
+load_dotenv(Path(__file__).parent / ".env")
+
+# Initialize database (if configured)
+db_ready = True
+db_error = None
+try:
+    init_db()
+except Exception as e:
+    db_ready = False
+    db_error = str(e)
+
+def set_current_user(user_row):
+    st.session_state["current_user"] = {
+        "id": user_row.id,
+        "email": user_row.email,
+        "company_id": user_row.company_id,
+        "role": getattr(user_row, "role", None) or "member"
+    }
+    # Extract domain from email for company lookup
+    if "@" in user_row.email:
+        domain = user_row.email.split("@")[1].lower()
+        st.session_state["current_user"]["domain"] = domain
+
+def get_current_user():
+    return st.session_state.get("current_user")
 
 st.set_page_config(
     page_title="Mira Agent", 
@@ -22,6 +52,132 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Load custom theme font + CSS
+st.markdown("""
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <script>
+        // Hide icon names that appear as text - ultra aggressive approach
+        const iconPatterns = [
+            /keyboard_double_arrow_left/i,
+            /keyboard_double_arrow_right/i,
+            /keyboard_double/i,
+            /board_double_arrow_left/i,
+            /board_double_arrow_right/i,
+            /key_double/i,
+            /double_arrow/i
+        ];
+        
+        function hideIconNames() {
+            // Method 1: Find all text nodes and hide parent elements
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            let node;
+            while (node = walker.nextNode()) {
+                const text = node.textContent?.trim() || '';
+                if (iconPatterns.some(pattern => pattern.test(text))) {
+                    let parent = node.parentElement;
+                    // Go up the tree to find a suitable element to hide
+                    while (parent && parent !== document.body) {
+                        const parentText = parent.textContent?.trim() || '';
+                        // If parent only contains the icon name, hide it
+                        if (iconPatterns.some(pattern => pattern.test(parentText) && parentText.length < 100)) {
+                            parent.style.cssText = 'display: none !important; visibility: hidden !important; height: 0 !important; width: 0 !important; overflow: hidden !important; opacity: 0 !important;';
+                            break;
+                        }
+                        parent = parent.parentElement;
+                    }
+                    // Also hide the text node's direct parent
+                    if (node.parentElement) {
+                        node.parentElement.style.cssText = 'display: none !important; visibility: hidden !important;';
+                    }
+                }
+            }
+            
+            // Method 2: Find all elements and check their text content
+            const allElements = document.querySelectorAll('*:not(script):not(style):not(noscript)');
+            allElements.forEach(el => {
+                const text = el.textContent?.trim() || '';
+                // Hide if text exactly matches an icon name or is very short and contains icon pattern
+                if (text.length > 0 && text.length < 100) {
+                    if (iconPatterns.some(pattern => pattern.test(text))) {
+                        el.style.cssText = 'display: none !important; visibility: hidden !important; height: 0 !important; width: 0 !important; overflow: hidden !important; opacity: 0 !important; position: absolute !important; left: -9999px !important;';
+                    }
+                }
+            });
+        }
+        
+        // Run immediately
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                hideIconNames();
+                setInterval(hideIconNames, 500); // Run every 500ms
+            });
+        } else {
+            hideIconNames();
+            setInterval(hideIconNames, 500); // Run every 500ms
+        }
+        
+        // Use MutationObserver to catch new content immediately
+        const observer = new MutationObserver(function(mutations) {
+            hideIconNames();
+        });
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: false
+        });
+    </script>
+""", unsafe_allow_html=True)
+try:
+    with open("mira-theme.css", "r", encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+except Exception:
+    pass
+
+# Process Supabase access token from welcome app
+if 'current_user' not in st.session_state:
+    access_token = st.query_params.get("access_token")
+    if access_token and db_ready:
+        try:
+            sb_user = verify_supabase_token(access_token)
+            if sb_user and sb_user.get("email"):
+                email = sb_user["email"]
+                domain = email.split("@")[1].lower() if "@" in email else None
+                company_name = domain.split(".")[0].capitalize() if domain else "Default Company"
+                user_row = get_or_create_user(email=email, company_name=company_name, domain=domain)
+                set_current_user(user_row)
+                st.query_params.clear()  # Remove token from URL
+                st.rerun()
+        except RuntimeError as e:
+            # Supabase not configured - silently skip (not an error)
+            if "not set" in str(e):
+                pass  # Supabase auth is optional
+            else:
+                st.error(f"Supabase login failed: {str(e)}")
+        except Exception as e:
+            # Other errors - log but don't break the app
+            pass
+
+# Process login token from magic link URL
+if 'current_user' not in st.session_state:
+    login_token = st.query_params.get("login_token")
+    if login_token and db_ready:
+        try:
+            user_row = verify_login_token(login_token)
+            if user_row:
+                set_current_user(user_row)
+                st.query_params.clear()  # Remove token from URL for security
+                st.rerun()
+        except Exception as e:
+            st.error(f"Login failed: {str(e)}")
 
 # Custom CSS for cleaner look with chat styling
 st.markdown("""
@@ -78,7 +234,36 @@ st.caption("Technical Program Management Assistant")
 # --- Sidebar Configuration ---
 with st.sidebar:
     st.header("Configuration")
-    
+
+    st.subheader("Login")
+    current_user = get_current_user()
+    if not db_ready:
+        st.warning("Database not configured. Set DATABASE_URL to enable login.")
+        if db_error:
+            st.caption(f"Error: {db_error}")
+    elif current_user:
+        st.success(f"Logged in as {current_user['email']}")
+    else:
+        login_email = st.text_input("Email", placeholder="you@company.com")
+        if st.button("Send Magic Link"):
+            if not login_email:
+                st.warning("Enter an email address.")
+            else:
+                sender = os.getenv("MAGIC_LINK_SENDER")
+                password = os.getenv("MAGIC_LINK_PASSWORD")
+                if not sender or not password:
+                    st.error("Magic link email sender is not configured.")
+                else:
+                    try:
+                        token, _user = generate_login_token(login_email)
+                        success, msg = send_magic_link(login_email, token, sender, password)
+                        if success:
+                            st.success("Magic link sent. Check your email.")
+                        else:
+                            st.error(f"Failed to send link: {msg}")
+                    except Exception as e:
+                        st.error(f"Login error: {str(e)}")
+
     # LLM Selection
     st.subheader("AI Model")
     
@@ -100,10 +285,30 @@ with st.sidebar:
     elif selected_model_key == "gpt-3.5-turbo":
         st.success("Standard Legacy")
 
+    # Load API keys: company-level first, then user-level
+    saved_api_key = None
+    api_key_source = None
+    if current_user and db_ready:
+        try:
+            # Try company-level first
+            company_api_key = get_company_secret_value(current_user["company_id"], "openai_api_key")
+            if company_api_key:
+                saved_api_key = company_api_key
+                api_key_source = "company"
+            else:
+                # Fall back to user-level
+                saved_api_key = get_secret(current_user["id"], "openai_api_key")
+                if saved_api_key:
+                    api_key_source = "user"
+        except Exception:
+            saved_api_key = None
+
     api_key = st.text_input(
         "OpenAI API Key", 
         type="password",
-        placeholder="sk-..."
+        placeholder="sk-...",
+        value=saved_api_key or "",
+        help=f"Currently using: {api_key_source.title()}-level key" if api_key_source else "No key configured"
     )
     
     if not api_key:
@@ -113,8 +318,79 @@ with st.sidebar:
 
     # Trello Configuration
     st.subheader("Connections")
-    trello_key = st.text_input("Trello API Key", type="password", placeholder="Enter Trello API Key")
-    trello_token = st.text_input("Trello Token", type="password", placeholder="Enter Trello Token")
+    saved_trello_key = None
+    saved_trello_token = None
+    trello_source = None
+    if current_user and db_ready:
+        try:
+            # Try company-level first
+            company_trello_key = get_company_secret_value(current_user["company_id"], "trello_api_key")
+            company_trello_token = get_company_secret_value(current_user["company_id"], "trello_token")
+            if company_trello_key and company_trello_token:
+                saved_trello_key = company_trello_key
+                saved_trello_token = company_trello_token
+                trello_source = "company"
+            else:
+                # Fall back to user-level
+                saved_trello_key = get_secret(current_user["id"], "trello_api_key")
+                saved_trello_token = get_secret(current_user["id"], "trello_token")
+                if saved_trello_key or saved_trello_token:
+                    trello_source = "user"
+        except Exception:
+            saved_trello_key = None
+            saved_trello_token = None
+
+    trello_key = st.text_input(
+        "Trello API Key",
+        type="password",
+        placeholder="Enter Trello API Key",
+        value=saved_trello_key or "",
+        help=f"Currently using: {trello_source.title()}-level key" if trello_source else "No key configured"
+    )
+    trello_token = st.text_input(
+        "Trello Token",
+        type="password",
+        placeholder="Enter Trello Token",
+        value=saved_trello_token or "",
+        help=f"Currently using: {trello_source.title()}-level key" if trello_source else "No key configured"
+    )
+
+    # Credential saving options
+    if current_user and db_ready:
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save as User Credentials", use_container_width=True):
+                try:
+                    if api_key:
+                        set_secret(current_user["id"], "openai_api_key", api_key)
+                    if trello_key:
+                        set_secret(current_user["id"], "trello_api_key", trello_key)
+                    if trello_token:
+                        set_secret(current_user["id"], "trello_token", trello_token)
+                    st.success("User credentials saved.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to save: {str(e)}")
+        
+        with col2:
+            is_admin = current_user.get("role") == "admin"
+            if st.button("🏢 Save as Company Credentials", use_container_width=True, disabled=not is_admin):
+                try:
+                    if api_key:
+                        set_company_secret(current_user["company_id"], "openai_api_key", api_key)
+                    if trello_key:
+                        set_company_secret(current_user["company_id"], "trello_api_key", trello_key)
+                    if trello_token:
+                        set_company_secret(current_user["company_id"], "trello_token", trello_token)
+                    st.success("Company credentials saved. All users from your domain will use these keys.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to save: {str(e)}")
+            if not is_admin:
+                st.info("Only admins can set company-level credentials.")
+        
+        if api_key_source == "company" or trello_source == "company":
+            st.info("ℹ️ You're currently using company-level credentials. These are shared across all users from your domain.")
     
     st.divider()
     st.markdown("v2.2.0 - LangChain RAG")
@@ -182,6 +458,10 @@ def clean_markdown_display(content):
     cleaned = re.sub(r'^```\s*', '', cleaned)
     cleaned = re.sub(r'```$', '', cleaned)
     return cleaned
+
+def parse_list_names(raw):
+    """Parse comma-separated list names."""
+    return [item.strip() for item in raw.split(",") if item.strip()] if raw else []
 
 def download_actions(file_paths, content, prefix="report", key_prefix=""):
     """Reusable download actions component with Eager Generation paths"""
@@ -299,6 +579,16 @@ with plan_tab:
             with st.status("Processing...", expanded=True) as status:
                 st.write("Reading documents...")
                 processed_data = doc_processor.process_files(uploaded_files)
+
+                if current_user and db_ready:
+                    try:
+                        save_uploaded_files(
+                            uploaded_files,
+                            current_user["company_id"],
+                            current_user["id"]
+                        )
+                    except Exception as e:
+                        st.warning(f"Document storage skipped: {str(e)}")
                 
                 # Show details of processed files
                 for text_file in processed_data['file_details']:
@@ -447,7 +737,23 @@ with ai_tab:
                     with st.spinner(f"📚 Indexing {len(ai_uploaded_files)} document(s)..."):
                         try:
                             # Create vector store using FAISS (simpler than ChromaDB)
-                            vector_store = doc_processor.create_vector_store_simple(ai_uploaded_files, api_key)
+                            if current_user and db_ready:
+                                try:
+                                    save_uploaded_files(
+                                        ai_uploaded_files,
+                                        current_user["company_id"],
+                                        current_user["id"]
+                                    )
+                                except Exception as e:
+                                    st.warning(f"Document storage skipped: {str(e)}")
+                            use_pgvector = os.getenv("VECTOR_STORE", "").lower() == "pgvector"
+                            if use_pgvector:
+                                vector_store = doc_processor.create_vector_store_pgvector(
+                                    ai_uploaded_files,
+                                    api_key
+                                )
+                            else:
+                                vector_store = doc_processor.create_vector_store_simple(ai_uploaded_files, api_key)
                             
                             if vector_store:
                                 st.session_state.vector_store = vector_store
@@ -489,7 +795,111 @@ with ai_tab:
             st.info(f"📚 {len(st.session_state.get('indexed_files', []))} docs indexed")
         else:
             st.warning("📄 No documents loaded")
-    
+
+    # -------------------------------------------------------------------------
+    # Trello Board Creation from Documents
+    # -------------------------------------------------------------------------
+    with st.expander("📋 Create Trello Board from Documents", expanded=False):
+        st.markdown("Generate tasks from your documents and create a Trello board with lists and cards.")
+        board_name_input = st.text_input(
+            "Board Name (optional)",
+            placeholder="e.g. Q3 AI Adoption Project"
+        )
+        list_names_input = st.text_input(
+            "List Names (comma-separated)",
+            value="To Do, In Progress, Done"
+        )
+
+        if st.button("Create Board & Cards", type="primary"):
+            if not trello_key or not trello_token:
+                st.error("Please configure Trello credentials in the sidebar.")
+            elif not api_key:
+                st.error("OpenAI API Key is missing.")
+            elif not ai_uploaded_files:
+                st.error("Please upload project documents in the section above.")
+            else:
+                with st.status("Creating Trello board...", expanded=True) as status:
+                    status.write("Reading documents...")
+                    processed_data = doc_processor.process_files(ai_uploaded_files)
+                    combined_text = processed_data.get("combined_text", "")
+
+                    if not combined_text:
+                        status.update(label="No valid text found", state="error")
+                        st.stop()
+
+                    status.write("Generating task list from documents...")
+                    truncated_text = combined_text[:12000]
+                    spec = llm.generate_trello_board_spec(
+                        truncated_text,
+                        board_name=board_name_input or None,
+                        list_names=list_names_input or None
+                    )
+
+                    if isinstance(spec, dict) and spec.get("error"):
+                        status.update(label="Failed to generate tasks", state="error")
+                        st.error(spec["error"])
+                        st.stop()
+
+                    list_names = parse_list_names(list_names_input) or spec.get("lists") or ["To Do", "In Progress", "Done"]
+                    board_name = board_name_input or spec.get("board_name") or "Mira Project Board"
+
+                    status.write(f"Creating board: {board_name}")
+                    trello = TrelloClient(trello_key, trello_token)
+                    board_resp = trello.create_board(board_name)
+                    if isinstance(board_resp, dict) and board_resp.get("error"):
+                        status.update(label="Board creation failed", state="error")
+                        st.error(board_resp["error"])
+                        st.stop()
+
+                    board_id = board_resp.get("id")
+                    board_url = board_resp.get("shortUrl") or board_resp.get("url")
+                    if not board_id:
+                        status.update(label="Board creation failed", state="error")
+                        st.error("Trello did not return a board ID.")
+                        st.stop()
+
+                    status.write("Creating lists...")
+                    list_id_map = {}
+                    for list_name in list_names:
+                        list_resp = trello.create_list(board_id, list_name)
+                        if isinstance(list_resp, dict) and list_resp.get("error"):
+                            st.warning(f"Failed to create list '{list_name}': {list_resp['error']}")
+                            continue
+                        list_id_map[list_name] = list_resp.get("id")
+
+                    if not list_id_map:
+                        status.update(label="List creation failed", state="error")
+                        st.error("No lists were created. Check Trello credentials and permissions.")
+                        st.stop()
+
+                    status.write("Creating cards...")
+                    created_cards = 0
+                    failed_cards = 0
+                    default_list_id = next(iter(list_id_map.values()))
+                    for card in spec.get("cards", []):
+                        title = (card or {}).get("title") or "Untitled Task"
+                        description = (card or {}).get("description") or ""
+                        due_date = (card or {}).get("due_date") or None
+                        list_name = (card or {}).get("list") or ""
+                        list_id = list_id_map.get(list_name, default_list_id)
+
+                        resp = trello.create_card(
+                            list_id=list_id,
+                            name=title,
+                            desc=description,
+                            due=due_date
+                        )
+                        if isinstance(resp, dict) and resp.get("error"):
+                            failed_cards += 1
+                        else:
+                            created_cards += 1
+
+                    status.update(label="Trello board created", state="complete", expanded=False)
+                    st.success(f"Board created: {board_name}")
+                    if board_url:
+                        st.markdown(f"Board link: {board_url}")
+                    st.info(f"Lists: {len(list_id_map)} | Cards created: {created_cards} | Failed: {failed_cards}")
+
     st.divider()
     
     # -------------------------------------------------------------------------

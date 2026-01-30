@@ -107,6 +107,37 @@ class TrelloClient:
         except Exception as e:
             return {"error": str(e)}
 
+    def create_board(self, name):
+        """Create a new Trello board"""
+        url = f"{self.base_url}/boards"
+        query = {
+            'key': self.api_key,
+            'token': self.token,
+            'name': name
+        }
+        try:
+            resp = requests.post(url, params=query)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            return {"error": str(e)}
+
+    def create_list(self, board_id, name):
+        """Create a new list on a Trello board"""
+        url = f"{self.base_url}/lists"
+        query = {
+            'key': self.api_key,
+            'token': self.token,
+            'idBoard': board_id,
+            'name': name
+        }
+        try:
+            resp = requests.post(url, params=query)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            return {"error": str(e)}
+
     def update_card(self, card_id, name=None, desc=None, due=None, list_id=None, label_ids=None, member_ids=None):
         """Update key fields on an existing card"""
         url = f"{self.base_url}/cards/{card_id}"
